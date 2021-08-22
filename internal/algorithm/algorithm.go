@@ -1,7 +1,8 @@
-package utils
+package algorithm
 
 import (
 	"fmt"
+	"github.com/ozonva/ova-algorithm-api/internal/utils"
 )
 
 type Algorithm struct {
@@ -20,7 +21,7 @@ func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize int) ([][]Algorith
 		return nil, nil
 	}
 
-	chunks := calculateChunks(len(algorithms), chunkSize)
+	chunks := utils.CalculateChunks(len(algorithms), chunkSize)
 	slices := make([][]Algorithm, chunks)
 
 	for idx := 0; idx < chunks; idx++ {
@@ -33,6 +34,23 @@ func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize int) ([][]Algorith
 	}
 
 	return slices, nil
+}
+
+// AlgorithmBulksToSlice concatenates bulks of Algorithm into
+// single slice
+func AlgorithmBulksToSlice(bulks [][]Algorithm) []Algorithm {
+	flatSize := 0
+	for i := 0; i < len(bulks); i++ {
+		flatSize += len(bulks[i])
+	}
+	if flatSize == 0 {
+		return nil
+	}
+	algorithms := make([]Algorithm, 0, flatSize)
+	for i := 0; i < len(bulks); i++ {
+		algorithms = append(algorithms, bulks[i]...)
+	}
+	return algorithms
 }
 
 // AlgorithmSliceToMap converts slice of Algorithm to map[uint64]Algorithm

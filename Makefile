@@ -3,3 +3,6 @@ build:
 
 run:
 	go run cmd/ova-algorithm-api/main.go
+
+generate:
+	mockgen -source=internal/repo/repo.go > internal/mock_repo/mock_repo.go
