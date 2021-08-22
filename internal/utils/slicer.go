@@ -7,7 +7,7 @@ const (
 	ZeroOrNegativeChunksSize
 )
 
-func calculateChunks(sliceSize int, chunkSize int) int {
+func CalculateChunks(sliceSize int, chunkSize int) int {
 	quotient, remainder := sliceSize/chunkSize, sliceSize%chunkSize
 
 	chunks := quotient
@@ -29,7 +29,7 @@ func SplitToChunksInt(slice []int, chunkSize int) ([][]int, SplitToChunksError) 
 		return nil, NoError
 	}
 
-	chunks := calculateChunks(len(slice), chunkSize)
+	chunks := CalculateChunks(len(slice), chunkSize)
 	slices := make([][]int, chunks)
 
 	for idx := 0; idx < chunks; idx++ {

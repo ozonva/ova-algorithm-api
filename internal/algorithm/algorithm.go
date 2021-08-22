@@ -1,7 +1,8 @@
-package utils
+package algorithm
 
 import (
 	"fmt"
+	"github.com/ozonva/ova-algorithm-api/internal/utils"
 )
 
 type Algorithm struct {
@@ -11,28 +12,34 @@ type Algorithm struct {
 }
 
 // SplitAlgorithmsToBulks splits slice of []int into chunks of len chunkSize
-func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize int) ([][]Algorithm, error) {
-	if chunkSize <= 0 {
-		return nil, fmt.Errorf("chunkSize(%v) is negative or equal zero", chunkSize)
+func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize uint) [][]Algorithm {
+	const MaxInt = (^uint(0)) >> 1
+	if chunkSize > MaxInt {
+		chunkSize = MaxInt
 	}
+	chunkSizeInt := int(chunkSize)
 
 	if len(algorithms) == 0 {
-		return nil, nil
+		return nil
 	}
 
-	chunks := calculateChunks(len(algorithms), chunkSize)
+	if chunkSizeInt == 0 {
+		return [][]Algorithm{algorithms}
+	}
+
+	chunks := utils.CalculateChunks(len(algorithms), chunkSizeInt)
 	slices := make([][]Algorithm, chunks)
 
 	for idx := 0; idx < chunks; idx++ {
-		var chunkBegin = idx * chunkSize
-		var chunkEnd = chunkBegin + chunkSize
+		var chunkBegin = idx * chunkSizeInt
+		var chunkEnd = chunkBegin + chunkSizeInt
 		if chunkEnd > len(algorithms) {
 			chunkEnd = len(algorithms)
 		}
 		slices[idx] = algorithms[chunkBegin:chunkEnd]
 	}
 
-	return slices, nil
+	return slices
 }
 
 // AlgorithmSliceToMap converts slice of Algorithm to map[uint64]Algorithm
