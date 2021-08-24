@@ -75,5 +75,7 @@ func (r *saverRunner) pushAlgorithm(algorithm algorithm.Algorithm) {
 }
 
 func (r *saverRunner) flushStore() {
-	r.store = r.flusher.Flush(r.store)
+	if len(r.store) > 0 {
+		r.store = r.flusher.Flush(r.store)
+	}
 }
