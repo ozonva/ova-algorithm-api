@@ -3,6 +3,7 @@ package saver_test
 import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/mock_flusher"
 	saver "github.com/ozonva/ova-algorithm-api/internal/saver"
@@ -14,11 +15,13 @@ var _ = Describe("Saver", func() {
 		mockCtrl   *gomock.Controller
 		mocFlusher *mock_flusher.MockFlusher
 		s          saver.Saver
+		startTime  time.Time
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mocFlusher = mock_flusher.NewMockFlusher(mockCtrl)
+		startTime = time.Now()
 	})
 
 	AfterEach(func() {
@@ -26,192 +29,193 @@ var _ = Describe("Saver", func() {
 		mockCtrl.Finish()
 	})
 
-	Context("timer set to infinity, capacity 2", func() {
-		BeforeEach(func() {
-			s = saver.NewSaver(2, mocFlusher, time.Hour) // 1 hour = infinity
-		})
-
-		AfterEach(func() {
-			s.Close()
-		})
-
-		When("no data added", func() {
-			It("not call flusher at all", func() {
-			})
-		})
-
-		When("only one entity has been added", func() {
-			It("should only flush it once", func() {
-
-				listOf1 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 1)
-
-				mocFlusher.EXPECT().
-					Flush(listOf1).
-					Return(nil).
-					Times(1)
-
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
-			})
-		})
-
-		When("no data added", func() {
-			It("not call flusher at all", func() {
-			})
-		})
-
-		When("only two entity has been added", func() {
-			It("should only flush it once", func() {
-
-				listOf1_2 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
-
-				mocFlusher.EXPECT().
-					Flush(listOf1_2).
-					Return(nil).
-					Times(1)
-
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
-				s.Save(algorithm.CreateSimpleAlgorithm(2))
-			})
-		})
-
-		When("only two entity has been added with error for both on first flush", func() {
-			It("should only flush it once", func() {
-
-				listOf1_2 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
-
-				mocFlusher.EXPECT().
-					Flush(listOf1_2).
-					Return(listOf1_2).
-					Times(1)
-
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
-				s.Save(algorithm.CreateSimpleAlgorithm(2))
-
-				// flush on close
-				mocFlusher.EXPECT().
-					Flush(listOf1_2).
-					Return(nil).
-					Times(1)
-			})
-		})
-
-		When("only two entity has been added with error for the first algo on first flush", func() {
-			It("should only flush it once", func() {
-				listOf1 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 1)
-				listOf1_2 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
-
-				mocFlusher.EXPECT().
-					Flush(listOf1_2).
-					Return(listOf1).
-					Times(1)
-
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
-				s.Save(algorithm.CreateSimpleAlgorithm(2))
-
-				// flush on close
-				mocFlusher.EXPECT().
-					Flush(listOf1).
-					Return(nil).
-					Times(1)
-			})
-		})
-
-		When("only three entity has been added", func() {
-			It("should only flush it twice", func() {
-
-				listOf1_2 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
-				mocFlusher.EXPECT().
-					Flush(listOf1_2).
-					Return(nil).
-					Times(1)
-
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
-				s.Save(algorithm.CreateSimpleAlgorithm(2))
-
-				time.Sleep(100 * time.Millisecond)
-
-				s.Save(algorithm.CreateSimpleAlgorithm(3))
-
-				listOf3 := algorithm.CreateSimpleAlgorithmListRangeInclusive(3, 3)
-				mocFlusher.EXPECT().
-					Flush(listOf3).
-					Return(nil).
-					Times(1)
-			})
-		})
-	})
-
 	Context("timer set to 2 second, capacity 2", func() {
+		const Capacity = 2
+		const FlushPeriod = 2 * time.Second
+
 		BeforeEach(func() {
-			s = saver.NewSaver(2, mocFlusher, 2*time.Second)
+			s = saver.NewSaver(Capacity, mocFlusher, FlushPeriod)
 		})
 
 		AfterEach(func() {
-			s.Close()
+			s.Stop()
 		})
 
-		When("no data added", func() {
-			It("not call flusher at all after 3 seconds", func() {
-				time.Sleep(3 * time.Second)
+		When("no data is added to the store", func() {
+			BeforeEach(func() {
+				By("initially asserting the zero-sized storage with configured capacity")
+				length, capacity := s.GetLenAndCap()
+				Expect(length).To(Equal(0))
+				Expect(capacity).To(Equal(Capacity))
+			})
+
+			AfterEach(func() {
+				By("finally asserting the zero-sized storage with configured capacity")
+				length, capacity := s.GetLenAndCap()
+				Expect(length).To(Equal(0))
+				Expect(capacity).To(Equal(Capacity))
+			})
+
+			It("shall not call flush after 1.5 flush period", func() {
+				sleepUntil(startTime.Add(FlushPeriod * 3 / 2))
+			})
+
+			It("shall not call flush after explicit Close call", func() {
+				s.Close()
 			})
 		})
 
-		When("only one entity has been added", func() {
-			It("should only flush it once after 3 seconds", func() {
-				listOf1 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 1)
+		When("one entity has been added to the storage", func() {
+			BeforeEach(func() {
+				By("initially asserting the zero-sized storage with configured capacity", func() {
+					length, capacity := s.GetLenAndCap()
+					Expect(length).To(Equal(0))
+					Expect(capacity).To(Equal(Capacity))
+				})
 
-				mocFlusher.EXPECT().
-					Flush(listOf1).
-					Return(nil).
-					Times(1)
+				By("saving algorithm[1] to the storage", func() {
+					err := s.Save(algorithm.CreateSimpleAlgorithm(1))
+					Expect(err).ShouldNot(HaveOccurred())
+				})
 
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
+				By("asserting the one-sized storage with configured capacity", func() {
+					length, capacity := s.GetLenAndCap()
+					Expect(length).To(Equal(1))
+					Expect(capacity).To(Equal(Capacity))
+				})
+			})
 
-				time.Sleep(3 * time.Second)
+			AfterEach(func() {
+				By("finally asserting the zero-sized storage with configured capacity")
+				length, capacity := s.GetLenAndCap()
+				Expect(length).To(Equal(0))
+				Expect(capacity).To(Equal(Capacity))
+			})
+
+			It("shall flush entities on timeout", func() {
+				By("configuring flush mock to flush all on list of 1", func() {
+					listOf1 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 1)
+					mocFlusher.EXPECT().
+						Flush(listOf1).
+						Return(nil).
+						Times(1)
+				})
+
+				By("waiting storage has flushed after 1.5 flush period", func() {
+					sleepUntil(startTime.Add(FlushPeriod * 3 / 2))
+				})
+			})
+
+			It("shall flush entities on explicit Close call", func() {
+				By("configuring flush mock to flush all on list of 1", func() {
+					listOf1 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 1)
+					mocFlusher.EXPECT().
+						Flush(listOf1).
+						Return(nil).
+						Times(1)
+				})
+
+				By("explicitly calling s.Close()", func() {
+					s.Close()
+				})
+			})
+
+			It("shall flush entities if the storage is full", func() {
+				By("configuring flush mock to flush all on list of 1,2", func() {
+					listOf12 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
+					mocFlusher.EXPECT().
+						Flush(listOf12).
+						Return(nil).
+						Times(1)
+				})
+
+				By("saving 2 and checking it's result", func() {
+					err := s.Save(algorithm.CreateSimpleAlgorithm(2))
+					Expect(err).ShouldNot(HaveOccurred())
+				})
 			})
 		})
 
-		When("two entities added, each flushed after timeout", func() {
-			It("should only flush it once after 3 seconds", func() {
-				listOf1 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 1)
-				mocFlusher.EXPECT().
-					Flush(listOf1).
-					Return(nil).
-					Times(1)
+		When("storage is full", func() {
+			BeforeEach(func() {
+				By("initially asserting the zero-sized storage with configured capacity", func() {
+					length, capacity := s.GetLenAndCap()
+					Expect(length).To(Equal(0))
+					Expect(capacity).To(Equal(Capacity))
+				})
 
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
-				time.Sleep(3 * time.Second)
+				By("saving algorithm[1] to the storage", func() {
+					err := s.Save(algorithm.CreateSimpleAlgorithm(1))
+					Expect(err).ShouldNot(HaveOccurred())
+				})
 
-				listOf2 := algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 2)
-				mocFlusher.EXPECT().
-					Flush(listOf2).
-					Return(nil).
-					Times(1)
+				By("asserting the one-sized storage with configured capacity", func() {
+					length, capacity := s.GetLenAndCap()
+					Expect(length).To(Equal(1))
+					Expect(capacity).To(Equal(Capacity))
+				})
 
-				s.Save(algorithm.CreateSimpleAlgorithm(2))
-				time.Sleep(2 * time.Second)
+				By("configuring flush mock to fail flush on list of 1,2", func() {
+					listOf12 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
+					mocFlusher.EXPECT().
+						Flush(listOf12).
+						Return(listOf12).
+						Times(1)
+				})
+
+				By("saving algorithm[2] to the storage", func() {
+					err := s.Save(algorithm.CreateSimpleAlgorithm(2))
+					Expect(err).ShouldNot(HaveOccurred())
+				})
+
+				By("asserting the one-sized storage with configured capacity", func() {
+					length, capacity := s.GetLenAndCap()
+					Expect(length).To(Equal(2))
+					Expect(capacity).To(Equal(Capacity))
+				})
 			})
-		})
 
-		When("two entities added, each flushed after timeout, first flush fails", func() {
-			It("should only flush it once after 3 seconds", func() {
-				listOf1 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 1)
-				mocFlusher.EXPECT().
-					Flush(listOf1).
-					Return(listOf1).
-					Times(1)
+			It("shall fail Save to the storage", func() {
+				By("calling Save with algorithm[3]", func() {
+					err := s.Save(algorithm.CreateSimpleAlgorithm(3))
+					Expect(err).Should(HaveOccurred())
+				})
 
-				s.Save(algorithm.CreateSimpleAlgorithm(1))
-				time.Sleep(3 * time.Second)
+				By("asserting storage is still full", func() {
+					length, capacity := s.GetLenAndCap()
+					Expect(length).To(Equal(2))
+					Expect(capacity).To(Equal(Capacity))
+				})
+			})
 
-				listOf1_2 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
-				mocFlusher.EXPECT().
-					Flush(listOf1_2).
-					Return(nil).
-					Times(1)
+			It("shall flush the storage after 1.5 flush period", func() {
+				By("configuring flush mock to flush all on list of 1,2", func() {
+					listOf12 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
+					mocFlusher.EXPECT().
+						Flush(listOf12).
+						Return(nil).
+						Times(1)
+				})
 
-				s.Save(algorithm.CreateSimpleAlgorithm(2))
+				By("waiting storage has flushed after 1.5 flush period", func() {
+					sleepUntil(startTime.Add(FlushPeriod * 3 / 2))
+				})
+
+				By("asserting storage is empty", func() {
+					length, capacity := s.GetLenAndCap()
+					Expect(length).To(Equal(0))
+					Expect(capacity).To(Equal(Capacity))
+				})
 			})
 		})
 	})
 })
+
+// added to mitigate time deviations
+func sleepUntil(deadline time.Time) {
+	elapsed := time.Until(deadline)
+	if elapsed < 0 {
+		panic("time expectations broken")
+	}
+	time.Sleep(elapsed)
+}
