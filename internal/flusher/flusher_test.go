@@ -50,10 +50,10 @@ var _ = Describe("Flusher", func() {
 			It("should return nil", func() {
 				const listSize = 5
 				mockRepo.EXPECT().
-					AddAlgorithms(createSimpleAlgorithmList(listSize)).
+					AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
 					Return(nil).
 					Times(1)
-				notFlushed := flush.Flush(createSimpleAlgorithmList(listSize))
+				notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
 				Expect(notFlushed).To(BeNil())
 			})
 		})
@@ -62,11 +62,11 @@ var _ = Describe("Flusher", func() {
 			It("should return the same slice", func() {
 				const listSize = 5
 				mockRepo.EXPECT().
-					AddAlgorithms(createSimpleAlgorithmList(listSize)).
+					AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
 					Return(errors.New("cannot save to repo")).
 					Times(1)
-				notFlushed := flush.Flush(createSimpleAlgorithmList(listSize))
-				Expect(notFlushed).To(Equal(createSimpleAlgorithmList(listSize)))
+				notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
+				Expect(notFlushed).To(Equal(algorithm.CreateSimpleAlgorithmList(listSize)))
 			})
 		})
 	})
@@ -91,10 +91,10 @@ var _ = Describe("Flusher", func() {
 				It("accept all and return nil", func() {
 					const listSize = 1
 					mockRepo.EXPECT().
-						AddAlgorithms(createSimpleAlgorithmList(listSize)).
+						AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
 						Return(nil).
 						Times(1)
-					notFlushed := flush.Flush(createSimpleAlgorithmList(listSize))
+					notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
 					Expect(notFlushed).To(BeNil())
 				})
 			})
@@ -103,10 +103,10 @@ var _ = Describe("Flusher", func() {
 				It("accept all and return nil", func() {
 					const listSize = 2
 					mockRepo.EXPECT().
-						AddAlgorithms(createSimpleAlgorithmList(listSize)).
+						AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
 						Return(nil).
 						Times(1)
-					notFlushed := flush.Flush(createSimpleAlgorithmList(listSize))
+					notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
 					Expect(notFlushed).To(BeNil())
 				})
 			})
@@ -115,15 +115,15 @@ var _ = Describe("Flusher", func() {
 				It("accept all and return nil", func() {
 					gomock.InOrder(
 						mockRepo.EXPECT().
-							AddAlgorithms(createSimpleAlgorithmListRangeInclusive(0, 1)).
+							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 1)).
 							Return(nil).
 							Times(1),
 						mockRepo.EXPECT().
-							AddAlgorithms(createSimpleAlgorithmListRangeInclusive(2, 2)).
+							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 2)).
 							Return(nil).
 							Times(1),
 					)
-					notFlushed := flush.Flush(createSimpleAlgorithmListRangeInclusive(0, 2))
+					notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 2))
 					Expect(notFlushed).To(BeNil())
 				})
 			})
@@ -133,7 +133,7 @@ var _ = Describe("Flusher", func() {
 			When("list of one element", func() {
 				It("returns list of all input algorithms if cannot flush", func() {
 					const listSize = 1
-					list := createSimpleAlgorithmList(listSize)
+					list := algorithm.CreateSimpleAlgorithmList(listSize)
 					mockRepo.EXPECT().
 						AddAlgorithms(list).
 						Return(fmt.Errorf("cannot flush to repo")).
@@ -148,45 +148,25 @@ var _ = Describe("Flusher", func() {
 			When("list one of five element", func() {
 				It("returns list of all input algorithms if cannot flush", func() {
 					const listSize = 1
-					list := createSimpleAlgorithmListRangeInclusive(0, 4)
+					list := algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 4)
 					gomock.InOrder(
 						mockRepo.EXPECT().
-							AddAlgorithms(createSimpleAlgorithmListRangeInclusive(0, 1)).
+							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 1)).
 							Return(nil).
 							Times(1),
 						mockRepo.EXPECT().
-							AddAlgorithms(createSimpleAlgorithmListRangeInclusive(2, 3)).
+							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 3)).
 							Return(fmt.Errorf("cannot flush to repo")).
 							Times(1),
 						mockRepo.EXPECT().
-							AddAlgorithms(createSimpleAlgorithmListRangeInclusive(4, 4)).
+							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(4, 4)).
 							Return(nil).
 							Times(1),
 					)
 					notFlushed := flush.Flush(list)
-					Expect(notFlushed).To(Equal(createSimpleAlgorithmListRangeInclusive(2, 3)))
+					Expect(notFlushed).To(Equal(algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 3)))
 				})
 			})
 		})
 	})
 })
-
-func createSimpleAlgorithmListRangeInclusive(begin, end int) []algorithm.Algorithm {
-	if end < begin {
-		panic(fmt.Sprintf("end(%v) should not less begin(%v)", end, begin))
-	}
-	size := end - begin + 1
-	list := make([]algorithm.Algorithm, 0, size)
-	for i := begin; i <= end; i++ {
-		list = append(list, algorithm.Algorithm{
-			UserID:      uint64(i),
-			Subject:     fmt.Sprintf("Subject%v", i),
-			Description: fmt.Sprintf("Description%v", i),
-		})
-	}
-	return list
-}
-
-func createSimpleAlgorithmList(values int) []algorithm.Algorithm {
-	return createSimpleAlgorithmListRangeInclusive(1, values)
-}
