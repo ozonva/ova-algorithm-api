@@ -40,12 +40,14 @@ deps: .install-go-deps
 
 .install-go-deps:
 	ls go.mod || go mod init github.com/ozonva/ova-algorithm-api
-	GOBIN=$(LOCAL_BIN) go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-	GOBIN=$(LOCAL_BIN) go get -u github.com/golang/protobuf/proto
-	GOBIN=$(LOCAL_BIN) go get -u github.com/golang/protobuf/protoc-gen-go
-	GOBIN=$(LOCAL_BIN) go get -u google.golang.org/grpc
-	GOBIN=$(LOCAL_BIN) go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
-	GOBIN=$(LOCAL_BIN) go get -u github.com/rs/zerolog/log
-	GOBIN=$(LOCAL_BIN) go get -u github.com/golang/mock/mockgen
+	GOBIN=$(LOCAL_BIN) go get -d google.golang.org/protobuf
+	GOBIN=$(LOCAL_BIN) go get -d google.golang.org/protobuf/cmd/protoc-gen-go
+	GOBIN=$(LOCAL_BIN) go get -d google.golang.org/grpc
+	GOBIN=$(LOCAL_BIN) go get -d google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	GOBIN=$(LOCAL_BIN) go get -d github.com/rs/zerolog/log
+	GOBIN=$(LOCAL_BIN) go get -d github.com/golang/mock/mockgen
+	GOBIN=$(LOCAL_BIN) go get -d github.com/pressly/goose/v3/cmd/goose
 	GOBIN=$(LOCAL_BIN) go install github.com/golang/mock/mockgen
+	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	GOBIN=$(LOCAL_BIN) go install github.com/pressly/goose/v3/cmd/goose

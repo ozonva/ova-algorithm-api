@@ -33,7 +33,7 @@ func (a *api) CreateAlgorithmV1(
 func (a *api) DescribeAlgorithmV1(
 	ctx context.Context,
 	req *desc.DescribeAlgorithmRequestV1,
-	) (*desc.DescribeAlgorithmResponseV1, error) {
+) (*desc.DescribeAlgorithmResponseV1, error) {
 	log.Info().
 		Int64("id", req.Body.Id).
 		Msg("DescribeAlgorithmV1")
@@ -62,6 +62,5 @@ func (a *api) RemoveAlgorithmV1(
 }
 
 func NewOvaAlgorithmApi() desc.OvaAlgorithmApiServer {
-	return &api{
-	}
+	return &api{}
 }
