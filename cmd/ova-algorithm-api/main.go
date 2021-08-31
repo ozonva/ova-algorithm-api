@@ -14,8 +14,6 @@ import (
 
 	api "github.com/ozonva/ova-algorithm-api/internal/api"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
-
-	_ "github.com/jnewmano/grpc-json-proxy/codec"
 )
 
 const (
@@ -38,9 +36,9 @@ func run() error {
 	return nil
 }
 
-type Config struct {}
+type Config struct{}
 
-func readConfig (path string) (*Config, error) {
+func readConfig(path string) (*Config, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open file \"%v\"", path)
@@ -80,9 +78,9 @@ func monitorConfig() <-chan *Config {
 			if err != nil {
 				fmt.Printf("update Config failed: %v\n", err.Error())
 			}
-
+			// TODO: add comparison configs as soon as settings added to Config
 			// if newConfig != oldConfig {
-				c <- newConfig
+			c <- newConfig
 			// }
 
 			time.Sleep(3600 * time.Second)
@@ -111,7 +109,7 @@ func main() {
 		case sig := <-sigs:
 			log.Log().Msgf("%v signal received. terminating...", sig)
 			return
-		case <- configUpdates:
+		case <-configUpdates:
 			log.Log().Msg("new config received")
 		}
 	}
