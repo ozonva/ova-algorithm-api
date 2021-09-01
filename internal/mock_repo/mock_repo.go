@@ -77,3 +77,18 @@ func (mr *MockRepoMockRecorder) ListAlgorithms(limit, offset interface{}) *gomoc
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAlgorithms", reflect.TypeOf((*MockRepo)(nil).ListAlgorithms), limit, offset)
 }
+
+// RemoveAlgorithm mocks base method.
+func (m *MockRepo) RemoveAlgorithm(algorithmID uint64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveAlgorithm", algorithmID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RemoveAlgorithm indicates an expected call of RemoveAlgorithm.
+func (mr *MockRepoMockRecorder) RemoveAlgorithm(algorithmID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAlgorithm", reflect.TypeOf((*MockRepo)(nil).RemoveAlgorithm), algorithmID)
+}

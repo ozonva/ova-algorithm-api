@@ -1,8 +1,8 @@
 -- +goose Up
 create table algorithms (
   id serial primary key,
-  subject text,
-  description text
+  subject text not null,
+  description text not null
 );
 
 -- +goose Down

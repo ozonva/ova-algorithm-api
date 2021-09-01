@@ -47,7 +47,12 @@ deps: .install-go-deps
 	GOBIN=$(LOCAL_BIN) go get -d github.com/rs/zerolog/log
 	GOBIN=$(LOCAL_BIN) go get -d github.com/golang/mock/mockgen
 	GOBIN=$(LOCAL_BIN) go get -d github.com/pressly/goose/v3/cmd/goose
+	GOBIN=$(LOCAL_BIN) go get -d github.com/jackc/pgx/stdlib
+	GOBIN=$(LOCAL_BIN) go get -d github.com/onsi/ginkgo/ginkgo
+	GOBIN=$(LOCAL_BIN) go get -d github.com/onsi/gomega
+	GOBIN=$(LOCAL_BIN) go get -d github.com/Masterminds/squirrel
 	GOBIN=$(LOCAL_BIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 	GOBIN=$(LOCAL_BIN) go install github.com/pressly/goose/v3/cmd/goose
+	GOBIN=$(LOCAL_BIN) go install github.com/onsi/ginkgo/ginkgo

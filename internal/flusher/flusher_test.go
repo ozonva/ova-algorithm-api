@@ -3,7 +3,7 @@ package flusher_test
 import (
 	"errors"
 	"fmt"
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
