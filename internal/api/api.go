@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
@@ -52,7 +53,12 @@ func (a *api) DescribeAlgorithmV1(
 		Int64("id", req.Body.Id).
 		Msg("DescribeAlgorithmV1 request")
 
-	algo, err := a.repo.DescribeAlgorithm(uint64(req.Body.Id))
+	id, err := validateOneInt32MaxRangeInt64(req.Body.Id)
+	if err != nil {
+		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
+	}
+
+	algo, err := a.repo.DescribeAlgorithm(id)
 
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "database fetch error")
@@ -81,7 +87,17 @@ func (a *api) ListAlgorithmsV1(
 		Int64("limit", req.Limit).
 		Msg("ListAlgorithmsV1 request")
 
-	list, err := a.repo.ListAlgorithms(uint64(req.Limit), uint64(req.Offset.Id))
+	id, err := validateZeroInt32MaxRangeInt64(req.Offset.Id)
+	if err != nil {
+		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("offset %v", err.Error()))
+	}
+
+	limit, err := validateOneInt32MaxRangeInt64(req.Limit)
+	if err != nil {
+		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("limit %v", err.Error()))
+	}
+
+	list, err := a.repo.ListAlgorithms(limit, id)
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "database list error")
 	}
@@ -114,11 +130,16 @@ func (a *api) RemoveAlgorithmV1(
 		Int64("id", req.Body.Id).
 		Msg("RemoveAlgorithmV1")
 
-	found, err := a.repo.RemoveAlgorithm(uint64(req.Body.Id))
+	id, err := validateOneInt32MaxRangeInt64(req.Body.Id)
+	if err != nil {
+		return new(emptypb.Empty), status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
+	}
+
+	found, err := a.repo.RemoveAlgorithm(id)
 
 	if err != nil {
 		log.Warn().Err(err).Msg("error occurred while RemoveAlgorithms")
-		return nil, status.Error(codes.Unavailable, "database delete error")
+		return new(emptypb.Empty), status.Error(codes.Unavailable, "database delete error")
 	}
 
 	if !found {
@@ -130,4 +151,20 @@ func (a *api) RemoveAlgorithmV1(
 
 func NewOvaAlgorithmApi(repo repo.Repo) desc.OvaAlgorithmApiServer {
 	return &api{repo: repo}
+}
+
+func validateOneInt32MaxRangeInt64(id int64) (uint64, error) {
+	//postgres SERIAL range 1 - 2,147,483,647
+	if id < 1 || id > 2147483647 {
+		return 0, fmt.Errorf("(%v) is out of range 1 - 2,147,483,647", id)
+	}
+	return uint64(id), nil
+}
+
+func validateZeroInt32MaxRangeInt64(id int64) (uint64, error) {
+	//postgres LIMIT range 0 - 2,147,483,647
+	if id < 0 || id > 2147483647 {
+		return 0, fmt.Errorf("(%v) is out of range 0 - 2,147,483,647", id)
+	}
+	return uint64(id), nil
 }

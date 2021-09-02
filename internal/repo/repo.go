@@ -44,18 +44,17 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 		return nil
 	}
 
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("failer to start transaction: %w", err)
-	}
-
 	sql, _, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
 		Insert(tableName).Columns(subjectColumn, descriptionColumn).
 		Values("", "").ToSql()
 
 	if err != nil {
-		tx.Rollback()
 		return fmt.Errorf("failed to build sql template: %w", err)
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failer to start transaction: %w", err)
 	}
 
 	stmt, err := tx.Prepare(sql)
@@ -98,9 +97,8 @@ func (r *repo) ListAlgorithms(limit, offset uint64) ([]algorithm.Algorithm, erro
 		var algo algorithm.Algorithm
 		if err := users.Scan(&algo.UserID, &algo.Subject, &algo.Description); err != nil {
 			return algorithms, fmt.Errorf("cannot parse algortihm: %w", err)
-		} else {
-			algorithms = append(algorithms, algo)
 		}
+		algorithms = append(algorithms, algo)
 	}
 	if err := users.Err(); err != nil {
 		return algorithms, fmt.Errorf("error list query %w", err)

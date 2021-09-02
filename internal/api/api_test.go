@@ -12,7 +12,6 @@ import (
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"time"
 )
 
 var _ = Describe("Api", func() {
@@ -29,7 +28,6 @@ var _ = Describe("Api", func() {
 	})
 
 	AfterEach(func() {
-		time.Sleep(100 * time.Millisecond)
 		mockCtrl.Finish()
 	})
 
@@ -78,9 +76,9 @@ var _ = Describe("Api", func() {
 
 	When("database describe can find entity", func() {
 		It("it should return found algorithm and nil error", func() {
-			algo := algorithm.CreateSimpleAlgorithm(0)
+			algo := algorithm.CreateSimpleAlgorithm(1)
 
-			const algorithmId = 0
+			const algorithmId = 1
 
 			mockRepo.EXPECT().
 				DescribeAlgorithm(uint64(algo.UserID)).
@@ -103,9 +101,9 @@ var _ = Describe("Api", func() {
 
 	When("database describe cannot find entity", func() {
 		It("it should return NotFound", func() {
-			algo := algorithm.CreateSimpleAlgorithm(0)
+			algo := algorithm.CreateSimpleAlgorithm(1)
 
-			const algorithmId = 0
+			const algorithmId = 1
 
 			mockRepo.EXPECT().
 				DescribeAlgorithm(uint64(algo.UserID)).
@@ -127,9 +125,9 @@ var _ = Describe("Api", func() {
 
 	When("database describe got error while request", func() {
 		It("it should return Unavailable", func() {
-			algo := algorithm.CreateSimpleAlgorithm(0)
+			algo := algorithm.CreateSimpleAlgorithm(1)
 
-			const algorithmId = 0
+			const algorithmId = 1
 
 			mockRepo.EXPECT().
 				DescribeAlgorithm(uint64(algo.UserID)).
@@ -146,6 +144,42 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.Unavailable, "database fetch error")))
+			Expect(res).To(BeNil())
+		})
+	})
+
+	When("database describe go id(0) out of range", func() {
+		It("it should return OutOfRange", func() {
+			const algorithmId = 0
+
+			req := &desc.DescribeAlgorithmRequestV1{
+				Body: &desc.AlgorithmIdV1{
+					Id: algorithmId,
+				},
+			}
+
+			res, err := s.DescribeAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (0) is out of range 1 - 2,147,483,647")))
+			Expect(res).To(BeNil())
+		})
+	})
+
+	When("database describe go id(2147483648) out of range", func() {
+		It("it should return OutOfRange", func() {
+			const algorithmId = 2147483648
+
+			req := &desc.DescribeAlgorithmRequestV1{
+				Body: &desc.AlgorithmIdV1{
+					Id: algorithmId,
+				},
+			}
+
+			res, err := s.DescribeAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (2147483648) is out of range 1 - 2,147,483,647")))
 			Expect(res).To(BeNil())
 		})
 	})
@@ -234,6 +268,86 @@ var _ = Describe("Api", func() {
 		})
 	})
 
+	When("offset is out of range (-1) is provided", func() {
+		It("it should return NotFound", func() {
+			const limit = 3
+			const offset = -1
+
+			req := &desc.ListAlgorithmsRequestV1{
+				Offset: &desc.AlgorithmIdV1{
+					Id: offset,
+				},
+				Limit: limit,
+			}
+
+			res, err := s.ListAlgorithmsV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "offset (-1) is out of range 0 - 2,147,483,647")))
+			Expect(res).To(BeNil())
+		})
+	})
+
+	When("offset is out of range (2,147,483,648) is provided", func() {
+		It("it should return NotFound", func() {
+			const limit = 3
+			const offset = 2147483648
+
+			req := &desc.ListAlgorithmsRequestV1{
+				Offset: &desc.AlgorithmIdV1{
+					Id: offset,
+				},
+				Limit: limit,
+			}
+
+			res, err := s.ListAlgorithmsV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "offset (2147483648) is out of range 0 - 2,147,483,647")))
+			Expect(res).To(BeNil())
+		})
+	})
+
+	When("limit is out of range (0) is provided", func() {
+		It("it should return NotFound", func() {
+			const limit = 0
+			const offset = 5
+
+			req := &desc.ListAlgorithmsRequestV1{
+				Offset: &desc.AlgorithmIdV1{
+					Id: offset,
+				},
+				Limit: limit,
+			}
+
+			res, err := s.ListAlgorithmsV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "limit (0) is out of range 1 - 2,147,483,647")))
+			Expect(res).To(BeNil())
+		})
+	})
+
+	When("limit is out of range (2,147,483,648) is provided", func() {
+		It("it should return NotFound", func() {
+			const limit = 2147483648
+			const offset = 5
+
+			req := &desc.ListAlgorithmsRequestV1{
+				Offset: &desc.AlgorithmIdV1{
+					Id: offset,
+				},
+				Limit: limit,
+			}
+
+			res, err := s.ListAlgorithmsV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "limit (2147483648) is out of range 1 - 2,147,483,647")))
+			Expect(res).To(BeNil())
+		})
+	})
+
 	When("database remove got error while request", func() {
 		It("it should return Unavailable", func() {
 			const id = 3
@@ -253,7 +367,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.Unavailable, "database delete error")))
-			Expect(res).To(BeNil())
+			Expect(res).NotTo(BeNil())
 		})
 	})
 
@@ -298,6 +412,42 @@ var _ = Describe("Api", func() {
 			res, err := s.RemoveAlgorithmV1(context.Background(), req)
 
 			Expect(err).NotTo(HaveOccurred())
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("id out of range (0) provided for removal", func() {
+		It("should return OutOfRange", func() {
+			const id = 0
+
+			req := &desc.RemoveAlgorithmRequestV1{
+				Body: &desc.AlgorithmIdV1{
+					Id: id,
+				},
+			}
+
+			res, err := s.RemoveAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (0) is out of range 1 - 2,147,483,647")))
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("id out of range (2,147,483,648) provided for removal", func() {
+		It("should return OutOfRange", func() {
+			const id = 2147483648
+
+			req := &desc.RemoveAlgorithmRequestV1{
+				Body: &desc.AlgorithmIdV1{
+					Id: id,
+				},
+			}
+
+			res, err := s.RemoveAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (2147483648) is out of range 1 - 2,147,483,647")))
 			Expect(res).ToNot(BeNil())
 		})
 	})
