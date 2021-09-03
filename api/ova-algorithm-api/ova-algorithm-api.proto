@@ -9,7 +9,7 @@ package ova.algorithm.api;
 
 service OvaAlgorithmApi {
 
-  rpc CreateAlgorithmV1(CreateAlgorithmRequestV1) returns (CreateAlgorithmResponseV1) {
+  rpc CreateAlgorithmV1(CreateAlgorithmRequestV1) returns (google.protobuf.Empty) {
   }
 
   rpc DescribeAlgorithmV1(DescribeAlgorithmRequestV1) returns (DescribeAlgorithmResponseV1) {
@@ -41,16 +41,12 @@ message CreateAlgorithmRequestV1 {
   AlgorithmValueV1 body = 1;
 }
 
-message CreateAlgorithmResponseV1 {
-  AlgorithmIdV1 body = 1;
-}
-
 message DescribeAlgorithmRequestV1 {
   AlgorithmIdV1 body = 1;
 }
 
 message DescribeAlgorithmResponseV1 {
-  AlgorithmValueV1 body = 1;
+  AlgorithmV1 body = 1;
 }
 
 message ListAlgorithmsRequestV1 {
@@ -59,7 +55,7 @@ message ListAlgorithmsRequestV1 {
 }
 
 message ListAlgorithmsResponseV1 {
-  repeated AlgorithmIdV1 body = 1;
+  repeated AlgorithmV1 body = 1;
 }
 
 message RemoveAlgorithmRequestV1 {

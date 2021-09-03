@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net"
@@ -14,6 +15,10 @@ import (
 
 	api "github.com/ozonva/ova-algorithm-api/internal/api"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
+	"google.golang.org/grpc/reflection"
+
+	"database/sql"
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 const (
@@ -26,8 +31,16 @@ func run() error {
 		log.Fatal().Err(err).Msg("failed to listen:")
 	}
 
+	dsn := "user=melkozer password=melkozer dbname=ova sslmode=disable"
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return fmt.Errorf("cannot open database connection: %w", err)
+	}
+
 	s := grpc.NewServer()
-	desc.RegisterOvaAlgorithmApiServer(s, api.NewOvaAlgorithmApi())
+	reflection.Register(s)
+	r := repo.NewRepo(db)
+	desc.RegisterOvaAlgorithmApiServer(s, api.NewOvaAlgorithmApi(r))
 
 	if err := s.Serve(listen); err != nil {
 		log.Err(err).Msg("failed to listen:")
