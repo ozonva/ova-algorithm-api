@@ -149,6 +149,39 @@ func (a *api) RemoveAlgorithmV1(
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully removed")
 }
 
+func (a *api) UpdateAlgorithmV1(
+	ctx context.Context,
+	req *desc.UpdateAlgorithmRequestV1,
+) (*emptypb.Empty, error) {
+	log.Debug().
+		Int64("id", req.Body.Id).
+		Msg("UpdateAlgorithmV1")
+
+	id, err := validateOneInt32MaxRangeInt64(req.Body.Id)
+	if err != nil {
+		return new(emptypb.Empty), status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
+	}
+
+	entity := algorithm.Algorithm{
+		UserID:      id,
+		Subject:     req.Body.Subject,
+		Description: req.Body.Description,
+	}
+
+	found, err := a.repo.UpdateAlgorithm(entity)
+
+	if err != nil {
+		log.Warn().Err(err).Msg("error occurred while UpdateAlgorithmV1")
+		return new(emptypb.Empty), status.Error(codes.Unavailable, "database update error")
+	}
+
+	if !found {
+		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
+	}
+
+	return new(emptypb.Empty), status.Error(codes.OK, "successfully updated")
+}
+
 func NewOvaAlgorithmApi(repo repo.Repo) desc.OvaAlgorithmApiServer {
 	return &api{repo: repo}
 }

@@ -92,3 +92,18 @@ func (mr *MockRepoMockRecorder) RemoveAlgorithm(algorithmID interface{}) *gomock
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAlgorithm", reflect.TypeOf((*MockRepo)(nil).RemoveAlgorithm), algorithmID)
 }
+
+// UpdateAlgorithm mocks base method.
+func (m *MockRepo) UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAlgorithm", algorithm)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAlgorithm indicates an expected call of UpdateAlgorithm.
+func (mr *MockRepoMockRecorder) UpdateAlgorithm(algorithm interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAlgorithm", reflect.TypeOf((*MockRepo)(nil).UpdateAlgorithm), algorithm)
+}

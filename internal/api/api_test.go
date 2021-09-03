@@ -451,4 +451,118 @@ var _ = Describe("Api", func() {
 			Expect(res).ToNot(BeNil())
 		})
 	})
+
+	When("entity update got database error while request", func() {
+		It("it should return Unavailable", func() {
+			algo := algorithm.CreateSimpleAlgorithm(1)
+
+			mockRepo.EXPECT().
+				UpdateAlgorithm(algo).
+				Return(false, errors.New("some error")).
+				Times(1)
+
+			req := &desc.UpdateAlgorithmRequestV1{
+				Body: &desc.AlgorithmV1{
+					Id:          int64(algo.UserID),
+					Subject:     algo.Subject,
+					Description: algo.Description,
+				},
+			}
+
+			res, err := s.UpdateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.Unavailable, "database update error")))
+			Expect(res).NotTo(BeNil())
+		})
+	})
+
+	When("no entity has been found to for update", func() {
+		It("it should return NotFound", func() {
+			algo := algorithm.CreateSimpleAlgorithm(1)
+
+			mockRepo.EXPECT().
+				UpdateAlgorithm(algo).
+				Return(false, nil).
+				Times(1)
+
+			req := &desc.UpdateAlgorithmRequestV1{
+				Body: &desc.AlgorithmV1{
+					Id:          int64(algo.UserID),
+					Subject:     algo.Subject,
+					Description: algo.Description,
+				},
+			}
+
+			res, err := s.UpdateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.NotFound, "identity not found")))
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("update were able to find entity", func() {
+		It("it should return nil error", func() {
+			algo := algorithm.CreateSimpleAlgorithm(1)
+
+			mockRepo.EXPECT().
+				UpdateAlgorithm(algo).
+				Return(true, nil).
+				Times(1)
+
+			req := &desc.UpdateAlgorithmRequestV1{
+				Body: &desc.AlgorithmV1{
+					Id:          int64(algo.UserID),
+					Subject:     algo.Subject,
+					Description: algo.Description,
+				},
+			}
+
+			res, err := s.UpdateAlgorithmV1(context.Background(), req)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("id out of range (0) provided for update", func() {
+		It("should return OutOfRange", func() {
+			algo := algorithm.CreateSimpleAlgorithm(0)
+
+			req := &desc.UpdateAlgorithmRequestV1{
+				Body: &desc.AlgorithmV1{
+					Id:          int64(algo.UserID),
+					Subject:     algo.Subject,
+					Description: algo.Description,
+				},
+			}
+
+			res, err := s.UpdateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (0) is out of range 1 - 2,147,483,647")))
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("id out of range (2,147,483,648) provided for update", func() {
+		It("should return OutOfRange", func() {
+			algo := algorithm.CreateSimpleAlgorithm(2147483648)
+
+			req := &desc.UpdateAlgorithmRequestV1{
+				Body: &desc.AlgorithmV1{
+					Id:          int64(algo.UserID),
+					Subject:     algo.Subject,
+					Description: algo.Description,
+				},
+			}
+
+			res, err := s.UpdateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (2147483648) is out of range 1 - 2,147,483,647")))
+			Expect(res).ToNot(BeNil())
+		})
+	})
 })

@@ -29,6 +29,11 @@ type Repo interface {
 
 	// RemoveAlgorithm returns found id entity has been removed and error
 	RemoveAlgorithm(algorithmID uint64) (bool, error)
+
+	// UpdateAlgorithm updates fields of algorithm. Algorithm is selected
+	// provided id. If no algorithm exists nothing is updates and false is
+	// returned as the first return value
+	UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error)
 }
 
 func NewRepo(db *sql.DB) Repo {
@@ -157,4 +162,25 @@ func (r *repo) RemoveAlgorithm(algorithmID uint64) (bool, error) {
 	}
 
 	return deletedRows > 0, nil
+}
+
+func (r *repo) UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error) {
+	result, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
+		Update(tableName).
+		Set(subjectColumn, algorithm.Subject).
+		Set(descriptionColumn, algorithm.Description).
+		Where(sq.Eq{idColumn: algorithm.UserID}).
+		RunWith(r.db).
+		Exec()
+
+	if err != nil {
+		return false, fmt.Errorf("cannot run delete query: %w", err)
+	}
+
+	updatedRows, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("cannot get rows affected: %w", err)
+	}
+
+	return updatedRows > 0, nil
 }

@@ -20,6 +20,9 @@ service OvaAlgorithmApi {
 
   rpc RemoveAlgorithmV1(RemoveAlgorithmRequestV1) returns (google.protobuf.Empty) {
   }
+
+  rpc UpdateAlgorithmV1(UpdateAlgorithmRequestV1) returns (google.protobuf.Empty) {
+  }
 }
 
 message AlgorithmIdV1 {
@@ -60,4 +63,8 @@ message ListAlgorithmsResponseV1 {
 
 message RemoveAlgorithmRequestV1 {
   AlgorithmIdV1 body = 1;
+}
+
+message UpdateAlgorithmRequestV1 {
+  AlgorithmV1 body = 1;
 }
