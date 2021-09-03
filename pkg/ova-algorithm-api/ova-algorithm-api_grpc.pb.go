@@ -24,6 +24,7 @@ type OvaAlgorithmApiClient interface {
 	ListAlgorithmsV1(ctx context.Context, in *ListAlgorithmsRequestV1, opts ...grpc.CallOption) (*ListAlgorithmsResponseV1, error)
 	RemoveAlgorithmV1(ctx context.Context, in *RemoveAlgorithmRequestV1, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateAlgorithmV1(ctx context.Context, in *UpdateAlgorithmRequestV1, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	MultiCreateAlgorithmV1(ctx context.Context, in *MultiCreateAlgorithmRequestV1, opts ...grpc.CallOption) (*MultiCreateAlgorithmResponseV1, error)
 }
 
 type ovaAlgorithmApiClient struct {
@@ -79,6 +80,15 @@ func (c *ovaAlgorithmApiClient) UpdateAlgorithmV1(ctx context.Context, in *Updat
 	return out, nil
 }
 
+func (c *ovaAlgorithmApiClient) MultiCreateAlgorithmV1(ctx context.Context, in *MultiCreateAlgorithmRequestV1, opts ...grpc.CallOption) (*MultiCreateAlgorithmResponseV1, error) {
+	out := new(MultiCreateAlgorithmResponseV1)
+	err := c.cc.Invoke(ctx, "/ova.algorithm.api.OvaAlgorithmApi/MultiCreateAlgorithmV1", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OvaAlgorithmApiServer is the server API for OvaAlgorithmApi service.
 // All implementations must embed UnimplementedOvaAlgorithmApiServer
 // for forward compatibility
@@ -88,6 +98,7 @@ type OvaAlgorithmApiServer interface {
 	ListAlgorithmsV1(context.Context, *ListAlgorithmsRequestV1) (*ListAlgorithmsResponseV1, error)
 	RemoveAlgorithmV1(context.Context, *RemoveAlgorithmRequestV1) (*emptypb.Empty, error)
 	UpdateAlgorithmV1(context.Context, *UpdateAlgorithmRequestV1) (*emptypb.Empty, error)
+	MultiCreateAlgorithmV1(context.Context, *MultiCreateAlgorithmRequestV1) (*MultiCreateAlgorithmResponseV1, error)
 	mustEmbedUnimplementedOvaAlgorithmApiServer()
 }
 
@@ -109,6 +120,9 @@ func (UnimplementedOvaAlgorithmApiServer) RemoveAlgorithmV1(context.Context, *Re
 }
 func (UnimplementedOvaAlgorithmApiServer) UpdateAlgorithmV1(context.Context, *UpdateAlgorithmRequestV1) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateAlgorithmV1 not implemented")
+}
+func (UnimplementedOvaAlgorithmApiServer) MultiCreateAlgorithmV1(context.Context, *MultiCreateAlgorithmRequestV1) (*MultiCreateAlgorithmResponseV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MultiCreateAlgorithmV1 not implemented")
 }
 func (UnimplementedOvaAlgorithmApiServer) mustEmbedUnimplementedOvaAlgorithmApiServer() {}
 
@@ -213,6 +227,24 @@ func _OvaAlgorithmApi_UpdateAlgorithmV1_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OvaAlgorithmApi_MultiCreateAlgorithmV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MultiCreateAlgorithmRequestV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OvaAlgorithmApiServer).MultiCreateAlgorithmV1(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ova.algorithm.api.OvaAlgorithmApi/MultiCreateAlgorithmV1",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OvaAlgorithmApiServer).MultiCreateAlgorithmV1(ctx, req.(*MultiCreateAlgorithmRequestV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OvaAlgorithmApi_ServiceDesc is the grpc.ServiceDesc for OvaAlgorithmApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -239,6 +271,10 @@ var OvaAlgorithmApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateAlgorithmV1",
 			Handler:    _OvaAlgorithmApi_UpdateAlgorithmV1_Handler,
+		},
+		{
+			MethodName: "MultiCreateAlgorithmV1",
+			Handler:    _OvaAlgorithmApi_MultiCreateAlgorithmV1_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

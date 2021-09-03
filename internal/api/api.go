@@ -182,6 +182,74 @@ func (a *api) UpdateAlgorithmV1(
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully updated")
 }
 
+func (a *api) MultiCreateAlgorithmV1(
+	ctx context.Context,
+	req *desc.MultiCreateAlgorithmRequestV1,
+) (*desc.MultiCreateAlgorithmResponseV1, error) {
+	log.Debug().
+		Int32("batchSize", req.BatchSize).
+		Int("len(pack)", len(req.Pack)).
+		Msg("MultiCreateAlgorithmV1")
+
+	if req.BatchSize < 1 {
+		return new(desc.MultiCreateAlgorithmResponseV1), status.Errorf(
+			codes.OutOfRange,
+			fmt.Sprintf("batch size (%v) should be more that zero", req.BatchSize),
+		)
+	}
+
+	packSize := len(req.Pack)
+	if packSize == 0 {
+		return new(desc.MultiCreateAlgorithmResponseV1), status.Errorf(
+			codes.InvalidArgument,
+			"pack cannot be empty",
+		)
+	}
+
+	if int(req.BatchSize) > packSize {
+		return new(desc.MultiCreateAlgorithmResponseV1), status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("batch size (%v) should be less that size of pack(%v)", req.BatchSize, packSize),
+		)
+	}
+
+	algos := make([]algorithm.Algorithm, 0, packSize)
+	for i := 0; i < packSize; i++ {
+		algos = append(algos, algorithm.Algorithm{
+			UserID:      0,
+			Subject:     req.Pack[i].Subject,
+			Description: req.Pack[i].Description,
+		})
+	}
+
+	failedBatches := make([]int32, 0)
+
+	algoPacks := algorithm.SplitAlgorithmsToBulks(algos, uint(req.BatchSize))
+	for i := 0; i < len(algoPacks); i++ {
+		if err := a.repo.AddAlgorithms(algoPacks[i]); err != nil {
+			log.Warn().Err(err).
+				Int("index", i).
+				Msg("failed to add batch")
+
+			failedBatches = append(failedBatches, int32(i))
+		}
+	}
+
+	res := &desc.MultiCreateAlgorithmResponseV1{
+		FailedBatches: failedBatches,
+	}
+
+	if len(failedBatches) == len(algoPacks) {
+		return res, status.Error(codes.Unavailable, "database issue: request failed")
+	}
+
+	if len(failedBatches) != 0 {
+		return res, status.Error(codes.Unavailable, "database issue: request partially succeeded")
+	}
+
+	return res, status.Error(codes.OK, "")
+}
+
 func NewOvaAlgorithmApi(repo repo.Repo) desc.OvaAlgorithmApiServer {
 	return &api{repo: repo}
 }

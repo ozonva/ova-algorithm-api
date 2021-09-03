@@ -23,6 +23,9 @@ service OvaAlgorithmApi {
 
   rpc UpdateAlgorithmV1(UpdateAlgorithmRequestV1) returns (google.protobuf.Empty) {
   }
+
+  rpc MultiCreateAlgorithmV1(MultiCreateAlgorithmRequestV1) returns (MultiCreateAlgorithmResponseV1) {
+  }
 }
 
 message AlgorithmIdV1 {
@@ -67,4 +70,13 @@ message RemoveAlgorithmRequestV1 {
 
 message UpdateAlgorithmRequestV1 {
   AlgorithmV1 body = 1;
+}
+
+message MultiCreateAlgorithmRequestV1 {
+  repeated AlgorithmValueV1 pack = 1;
+  int32 batch_size = 2;
+}
+
+message MultiCreateAlgorithmResponseV1 {
+  repeated int32 failed_batches = 1;
 }

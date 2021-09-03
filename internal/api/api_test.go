@@ -565,4 +565,171 @@ var _ = Describe("Api", func() {
 			Expect(res).ToNot(BeNil())
 		})
 	})
+
+	When("0 batchSize is provided", func() {
+		It("should return OutOfRange", func() {
+			algo := algorithm.CreateSimpleAlgorithm(1)
+
+			req := &desc.MultiCreateAlgorithmRequestV1{
+				Pack: []*desc.AlgorithmValueV1{
+					{
+						Subject:     algo.Subject,
+						Description: algo.Description,
+					},
+				},
+				BatchSize: 0,
+			}
+
+			res, err := s.MultiCreateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.OutOfRange, "batch size (0) should be more that zero")))
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("empty pack is provided", func() {
+		It("should return InvalidArgument", func() {
+			req := &desc.MultiCreateAlgorithmRequestV1{
+				BatchSize: 1,
+			}
+
+			res, err := s.MultiCreateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.InvalidArgument, "pack cannot be empty")))
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("batch size exceeds pack size", func() {
+		It("should return InvalidArgument", func() {
+			algo := algorithm.CreateSimpleAlgorithm(1)
+
+			req := &desc.MultiCreateAlgorithmRequestV1{
+				Pack: []*desc.AlgorithmValueV1{
+					{
+						Subject:     algo.Subject,
+						Description: algo.Description,
+					},
+				},
+				BatchSize: 2,
+			}
+
+			res, err := s.MultiCreateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.InvalidArgument, "batch size (2) should be less that size of pack(1)")))
+			Expect(res).ToNot(BeNil())
+		})
+	})
+
+	When("database fails all requests", func() {
+		It("should return Unavailable with all request failed", func() {
+			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+
+			gomock.InOrder(
+				mockRepo.EXPECT().
+					AddAlgorithms(algos1_3[0:2]).
+					Return(errors.New("some error")).
+					Times(1),
+
+				mockRepo.EXPECT().
+					AddAlgorithms(algos1_3[2:3]).
+					Return(errors.New("some more error")).
+					Times(1),
+			)
+
+			req := &desc.MultiCreateAlgorithmRequestV1{
+				Pack:      convertAlgorithmListToAlgorithmValueV1List(algos1_3),
+				BatchSize: 2,
+			}
+
+			res, err := s.MultiCreateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.Unavailable, "database issue: request failed")))
+			Expect(res).ToNot(BeNil())
+			Expect(res.FailedBatches).To(Equal([]int32{0, 1}))
+		})
+	})
+
+	When("database fails the first request of two", func() {
+		It("should return Unavailable with partially completed", func() {
+			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+
+			gomock.InOrder(
+				mockRepo.EXPECT().
+					AddAlgorithms(algos1_3[0:2]).
+					Return(errors.New("some error")).
+					Times(1),
+
+				mockRepo.EXPECT().
+					AddAlgorithms(algos1_3[2:3]).
+					Return(nil).
+					Times(1),
+			)
+
+			req := &desc.MultiCreateAlgorithmRequestV1{
+				Pack:      convertAlgorithmListToAlgorithmValueV1List(algos1_3),
+				BatchSize: 2,
+			}
+
+			res, err := s.MultiCreateAlgorithmV1(context.Background(), req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(status.Error(codes.Unavailable, "database issue: request partially succeeded")))
+			Expect(res).ToNot(BeNil())
+			Expect(res.FailedBatches).To(Equal([]int32{0}))
+		})
+	})
+
+	When("all database request succeeded", func() {
+		It("should return Unavailable with partially completed", func() {
+			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+
+			gomock.InOrder(
+				mockRepo.EXPECT().
+					AddAlgorithms(algos1_3[0:2]).
+					Return(nil).
+					Times(1),
+
+				mockRepo.EXPECT().
+					AddAlgorithms(algos1_3[2:3]).
+					Return(nil).
+					Times(1),
+			)
+
+			req := &desc.MultiCreateAlgorithmRequestV1{
+				Pack:      convertAlgorithmListToAlgorithmValueV1List(algos1_3),
+				BatchSize: 2,
+			}
+
+			res, err := s.MultiCreateAlgorithmV1(context.Background(), req)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).ToNot(BeNil())
+			Expect(res.FailedBatches).To(Equal([]int32{}))
+		})
+	})
 })
+
+func createAlgorithmRangeInclusiveZeroId(begin, end int) []algorithm.Algorithm {
+	list := algorithm.CreateSimpleAlgorithmListRangeInclusive(begin, end)
+	// clear ids
+	for i := 0; i < len(list); i++ {
+		list[i].UserID = 0
+	}
+	return list
+}
+
+func convertAlgorithmListToAlgorithmValueV1List(input []algorithm.Algorithm) []*desc.AlgorithmValueV1 {
+	list := make([]*desc.AlgorithmValueV1, 0, len(input))
+	for i := 0; i < len(input); i++ {
+		list = append(list, &desc.AlgorithmValueV1{
+			Subject:     input[i].Subject,
+			Description: input[i].Description,
+		})
+	}
+	return list
+}
