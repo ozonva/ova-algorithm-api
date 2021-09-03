@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/opentracing/opentracing-go"
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
@@ -186,6 +187,11 @@ func (a *api) MultiCreateAlgorithmV1(
 	ctx context.Context,
 	req *desc.MultiCreateAlgorithmRequestV1,
 ) (*desc.MultiCreateAlgorithmResponseV1, error) {
+	parentSpan, ctx := opentracing.StartSpanFromContext(ctx, "MultiCreateAlgorithmV1")
+	defer parentSpan.Finish()
+
+	parentSpan.LogKV("batchSize", req.BatchSize)
+
 	log.Debug().
 		Int32("batchSize", req.BatchSize).
 		Int("len(pack)", len(req.Pack)).
@@ -226,6 +232,12 @@ func (a *api) MultiCreateAlgorithmV1(
 
 	algoPacks := algorithm.SplitAlgorithmsToBulks(algos, uint(req.BatchSize))
 	for i := 0; i < len(algoPacks); i++ {
+		childSpan := opentracing.StartSpan(
+			"AddAlgorithms",
+			opentracing.ChildOf(parentSpan.Context()))
+
+		childSpan.LogKV("batchSize", len(algoPacks[i]))
+
 		if err := a.repo.AddAlgorithms(algoPacks[i]); err != nil {
 			log.Warn().Err(err).
 				Int("index", i).
@@ -233,6 +245,8 @@ func (a *api) MultiCreateAlgorithmV1(
 
 			failedBatches = append(failedBatches, int32(i))
 		}
+
+		childSpan.Finish()
 	}
 
 	res := &desc.MultiCreateAlgorithmResponseV1{

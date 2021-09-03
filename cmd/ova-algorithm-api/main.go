@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/opentracing/opentracing-go"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	"github.com/rs/zerolog/log"
+	"github.com/uber/jaeger-lib/metrics"
 	"io"
 	"net"
 	"os"
@@ -19,6 +21,10 @@ import (
 
 	"database/sql"
 	_ "github.com/jackc/pgx/stdlib"
+
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
+	jaegerlog "github.com/uber/jaeger-client-go/log"
 )
 
 const (
@@ -104,7 +110,33 @@ func monitorConfig() <-chan *Config {
 }
 
 func main() {
-	fmt.Println("ova-algorithm-api")
+	// Initialize jagger
+	cfg := jaegercfg.Configuration{
+		ServiceName: "OvaAlgorithmApi",
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+
+	jLogger := jaegerlog.StdLogger
+	jMetricsFactory := metrics.NullFactory
+
+	tracer, closer, err := cfg.NewTracer(
+		jaegercfg.Logger(jLogger),
+		jaegercfg.Metrics(jMetricsFactory),
+	)
+
+	if err != nil {
+		log.Fatal().Msg("cannot initialize jaeger tracer")
+		return
+	}
+
+	opentracing.SetGlobalTracer(tracer)
+	defer closer.Close()
 
 	configUpdates := monitorConfig()
 
