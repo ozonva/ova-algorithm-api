@@ -5,7 +5,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	"github.com/rs/zerolog/log"
-	"github.com/uber/jaeger-lib/metrics"
 	"io"
 	"net"
 	"os"
@@ -22,9 +21,7 @@ import (
 	"database/sql"
 	_ "github.com/jackc/pgx/stdlib"
 
-	"github.com/uber/jaeger-client-go"
-	jaegercfg "github.com/uber/jaeger-client-go/config"
-	jaegerlog "github.com/uber/jaeger-client-go/log"
+	"github.com/ozonva/ova-algorithm-api/internal/tracer"
 )
 
 const (
@@ -110,31 +107,11 @@ func monitorConfig() <-chan *Config {
 }
 
 func main() {
-	// Initialize jagger
-	cfg := jaegercfg.Configuration{
-		ServiceName: "OvaAlgorithmApi",
-		Sampler: &jaegercfg.SamplerConfig{
-			Type:  jaeger.SamplerTypeConst,
-			Param: 1,
-		},
-		Reporter: &jaegercfg.ReporterConfig{
-			LogSpans: true,
-		},
-	}
-
-	jLogger := jaegerlog.StdLogger
-	jMetricsFactory := metrics.NullFactory
-
-	tracer, closer, err := cfg.NewTracer(
-		jaegercfg.Logger(jLogger),
-		jaegercfg.Metrics(jMetricsFactory),
-	)
-
+	// Configure and enable tracer
+	tracer, closer, err := tracer.NewTracer()
 	if err != nil {
-		log.Fatal().Msg("cannot initialize jaeger tracer")
-		return
+		log.Fatal().Msg("cannot start tracer")
 	}
-
 	opentracing.SetGlobalTracer(tracer)
 	defer closer.Close()
 
@@ -152,7 +129,7 @@ func main() {
 	for {
 		select {
 		case sig := <-sigs:
-			log.Log().Msgf("%v signal received. terminating...", sig)
+			log.Info().Msgf("%v signal received. terminating...", sig)
 			return
 		case <-configUpdates:
 			log.Log().Msg("new config received")

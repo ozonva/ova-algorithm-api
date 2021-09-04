@@ -53,6 +53,7 @@ deps: .install-go-deps
 	GOBIN=$(LOCAL_BIN) go get -d github.com/Masterminds/squirrel
 	GOBIN=$(LOCAL_BIN) go get -d github.com/opentracing/opentracing-go
 	GOBIN=$(LOCAL_BIN) go get -d github.com/uber/jaeger-client-go
+	GOBIN=$(LOCAL_BIN) go get -d github.com/prometheus/client_golang/prometheus
 	GOBIN=$(LOCAL_BIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc

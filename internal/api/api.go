@@ -7,11 +7,35 @@ import (
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+var regCounterCreateAlgorithm = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "algorithm_created_notifications",
+	Help: "Notifications send to Kafka for Algorithms creations",
+})
+
+var regCounterUpdateAlgorithm = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "algorithm_updated_notifications",
+	Help: "Notifications send to Kafka for Algorithms updates",
+})
+
+var regCounterDeleteAlgorithm = prometheus.NewCounter(prometheus.CounterOpts{
+	Name: "algorithm_deleted_notifications",
+	Help: "Notifications send to Kafka for Algorithms deletes",
+})
+
+func init() {
+	prometheus.MustRegister(
+		regCounterCreateAlgorithm,
+		regCounterUpdateAlgorithm,
+		regCounterDeleteAlgorithm,
+	)
+}
 
 type api struct {
 	desc.UnimplementedOvaAlgorithmApiServer
@@ -42,6 +66,8 @@ func (a *api) CreateAlgorithmV1(
 
 		return new(emptypb.Empty), status.Error(codes.Unavailable, "database store failed")
 	}
+
+	regCounterCreateAlgorithm.Inc()
 
 	return new(emptypb.Empty), status.Error(codes.OK, "")
 }
@@ -147,6 +173,8 @@ func (a *api) RemoveAlgorithmV1(
 		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
 	}
 
+	regCounterDeleteAlgorithm.Inc()
+
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully removed")
 }
 
@@ -179,6 +207,8 @@ func (a *api) UpdateAlgorithmV1(
 	if !found {
 		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
 	}
+
+	regCounterUpdateAlgorithm.Inc()
 
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully updated")
 }
@@ -244,6 +274,8 @@ func (a *api) MultiCreateAlgorithmV1(
 				Msg("failed to add batch")
 
 			failedBatches = append(failedBatches, int32(i))
+		} else {
+			regCounterCreateAlgorithm.Add(float64(len(algoPacks[i])))
 		}
 
 		childSpan.Finish()
