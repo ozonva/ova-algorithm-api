@@ -809,7 +809,7 @@ func convertAlgorithmListToAlgorithmValueV1List(input []algorithm.Algorithm) []*
 	return list
 }
 
-func createAlgorithmNotificationChecker(id uint64, op notification.CurOperation ) func([]byte) error {
+func createAlgorithmNotificationChecker(id uint64, op notification.CurOperation) func([]byte) error {
 	return func(received []byte) error {
 		notify := notification.NewCurNotification(id, op)
 		expected, err := notify.Encode()
