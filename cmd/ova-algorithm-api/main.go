@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/opentracing/opentracing-go"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -85,7 +87,6 @@ func run() error {
 	}
 
 	r := repo.NewRepo(db)
-	s.GracefulStop()
 	desc.RegisterOvaAlgorithmApiServer(s, api.NewOvaAlgorithmApi(r, p))
 
 	if err := s.Serve(listen); err != nil {
@@ -159,6 +160,9 @@ func main() {
 	defer closer.Close()
 
 	configUpdates := monitorConfig()
+
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":23112", nil)
 
 	go func() {
 		if err := run(); err != nil {
