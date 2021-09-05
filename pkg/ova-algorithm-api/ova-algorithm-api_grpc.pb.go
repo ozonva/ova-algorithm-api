@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OvaAlgorithmApiClient interface {
-	CreateAlgorithmV1(ctx context.Context, in *CreateAlgorithmRequestV1, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateAlgorithmV1(ctx context.Context, in *CreateAlgorithmRequestV1, opts ...grpc.CallOption) (*CreateAlgorithmResponseV1, error)
 	DescribeAlgorithmV1(ctx context.Context, in *DescribeAlgorithmRequestV1, opts ...grpc.CallOption) (*DescribeAlgorithmResponseV1, error)
 	ListAlgorithmsV1(ctx context.Context, in *ListAlgorithmsRequestV1, opts ...grpc.CallOption) (*ListAlgorithmsResponseV1, error)
 	RemoveAlgorithmV1(ctx context.Context, in *RemoveAlgorithmRequestV1, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -35,8 +35,8 @@ func NewOvaAlgorithmApiClient(cc grpc.ClientConnInterface) OvaAlgorithmApiClient
 	return &ovaAlgorithmApiClient{cc}
 }
 
-func (c *ovaAlgorithmApiClient) CreateAlgorithmV1(ctx context.Context, in *CreateAlgorithmRequestV1, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *ovaAlgorithmApiClient) CreateAlgorithmV1(ctx context.Context, in *CreateAlgorithmRequestV1, opts ...grpc.CallOption) (*CreateAlgorithmResponseV1, error) {
+	out := new(CreateAlgorithmResponseV1)
 	err := c.cc.Invoke(ctx, "/ova.algorithm.api.OvaAlgorithmApi/CreateAlgorithmV1", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (c *ovaAlgorithmApiClient) MultiCreateAlgorithmV1(ctx context.Context, in *
 // All implementations must embed UnimplementedOvaAlgorithmApiServer
 // for forward compatibility
 type OvaAlgorithmApiServer interface {
-	CreateAlgorithmV1(context.Context, *CreateAlgorithmRequestV1) (*emptypb.Empty, error)
+	CreateAlgorithmV1(context.Context, *CreateAlgorithmRequestV1) (*CreateAlgorithmResponseV1, error)
 	DescribeAlgorithmV1(context.Context, *DescribeAlgorithmRequestV1) (*DescribeAlgorithmResponseV1, error)
 	ListAlgorithmsV1(context.Context, *ListAlgorithmsRequestV1) (*ListAlgorithmsResponseV1, error)
 	RemoveAlgorithmV1(context.Context, *RemoveAlgorithmRequestV1) (*emptypb.Empty, error)
@@ -106,7 +106,7 @@ type OvaAlgorithmApiServer interface {
 type UnimplementedOvaAlgorithmApiServer struct {
 }
 
-func (UnimplementedOvaAlgorithmApiServer) CreateAlgorithmV1(context.Context, *CreateAlgorithmRequestV1) (*emptypb.Empty, error) {
+func (UnimplementedOvaAlgorithmApiServer) CreateAlgorithmV1(context.Context, *CreateAlgorithmRequestV1) (*CreateAlgorithmResponseV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateAlgorithmV1 not implemented")
 }
 func (UnimplementedOvaAlgorithmApiServer) DescribeAlgorithmV1(context.Context, *DescribeAlgorithmRequestV1) (*DescribeAlgorithmResponseV1, error) {

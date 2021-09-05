@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/Shopify/sarama"
 	"github.com/opentracing/opentracing-go"
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
+	"github.com/ozonva/ova-algorithm-api/internal/notification"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 	"github.com/prometheus/client_golang/prometheus"
@@ -12,6 +14,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"strconv"
 )
 
 var regCounterCreateAlgorithm = prometheus.NewCounter(prometheus.CounterOpts{
@@ -37,39 +40,59 @@ func init() {
 	)
 }
 
+const defaultTopicName = "ova.algorithm.notify"
+
 type api struct {
 	desc.UnimplementedOvaAlgorithmApiServer
-	repo repo.Repo
+	repo     repo.Repo
+	producer sarama.AsyncProducer
+}
+
+func (a *api) Close() {
+
 }
 
 func (a *api) CreateAlgorithmV1(
 	ctx context.Context,
 	req *desc.CreateAlgorithmRequestV1,
-) (*emptypb.Empty, error) {
+) (*desc.CreateAlgorithmResponseV1, error) {
 	body := req.Body
 	log.Debug().
 		Str("subject", body.Subject).
 		Str("description", body.Description).
 		Msg("CreateAlgorithmV1 request")
 
-	algo := algorithm.Algorithm{
-		UserID:      0,
-		Subject:     body.Subject,
-		Description: body.Description,
+	algos := []algorithm.Algorithm{
+		{
+			UserID:      0,
+			Subject:     body.Subject,
+			Description: body.Description,
+		},
 	}
 
-	if err := a.repo.AddAlgorithms([]algorithm.Algorithm{algo}); err != nil {
+	res := &desc.CreateAlgorithmResponseV1{}
+
+	if err := a.repo.AddAlgorithms(algos); err != nil {
 		log.Warn().Err(err).
 			Str("subject", body.Subject).
 			Str("description", body.Description).
 			Msg("cannot add algorithm")
 
-		return new(emptypb.Empty), status.Error(codes.Unavailable, "database store failed")
+		return res, status.Error(codes.Unavailable, "database store failed")
 	}
 
+	res.Body = &desc.AlgorithmIdV1{
+		Id: int64(algos[0].UserID),
+	}
+
+	log.Debug().
+		Uint64("UserID", algos[0].UserID).
+		Msg("CreateAlgorithmV1 UserID assigned")
+
+	a.notifyKafkaAlgorithmPack(algos, notification.OP_CREATE)
 	regCounterCreateAlgorithm.Inc()
 
-	return new(emptypb.Empty), status.Error(codes.OK, "")
+	return res, status.Error(codes.OK, "")
 }
 
 func (a *api) DescribeAlgorithmV1(
@@ -173,6 +196,7 @@ func (a *api) RemoveAlgorithmV1(
 		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
 	}
 
+	a.notifyKafkaAlgorithmOne(id, notification.OP_DELETE)
 	regCounterDeleteAlgorithm.Inc()
 
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully removed")
@@ -208,6 +232,7 @@ func (a *api) UpdateAlgorithmV1(
 		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
 	}
 
+	a.notifyKafkaAlgorithmOne(entity.UserID, notification.OP_UPDATE)
 	regCounterUpdateAlgorithm.Inc()
 
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully updated")
@@ -258,46 +283,82 @@ func (a *api) MultiCreateAlgorithmV1(
 		})
 	}
 
-	failedBatches := make([]int32, 0)
-
 	algoPacks := algorithm.SplitAlgorithmsToBulks(algos, uint(req.BatchSize))
+	succeededBatches := make([]*desc.AlgorithmIdPackV1, 0, len(algoPacks))
+
 	for i := 0; i < len(algoPacks); i++ {
-		childSpan := opentracing.StartSpan(
-			"AddAlgorithms",
-			opentracing.ChildOf(parentSpan.Context()))
+		func() {
+			childSpan := opentracing.StartSpan(
+				"AddAlgorithms",
+				opentracing.ChildOf(parentSpan.Context()))
 
-		childSpan.LogKV("batchSize", len(algoPacks[i]))
+			childSpan.LogKV("batchSize", len(algoPacks[i]))
 
-		if err := a.repo.AddAlgorithms(algoPacks[i]); err != nil {
-			log.Warn().Err(err).
-				Int("index", i).
-				Msg("failed to add batch")
+			if err := a.repo.AddAlgorithms(algoPacks[i]); err != nil {
+				log.Warn().Err(err).
+					Int("index", i).
+					Int("batchSize", len(algoPacks[i])).
+					Msg("failed to add batch")
 
-			failedBatches = append(failedBatches, int32(i))
-		} else {
-			regCounterCreateAlgorithm.Add(float64(len(algoPacks[i])))
-		}
+			} else {
+				succeededBatches = append(succeededBatches, createAlgorithmIdPackV1(i, algoPacks[i]))
+				a.notifyKafkaAlgorithmPack(algoPacks[i], notification.OP_CREATE)
+				regCounterCreateAlgorithm.Add(float64(len(algoPacks[i])))
+			}
 
-		childSpan.Finish()
+			defer childSpan.Finish()
+		}()
 	}
 
 	res := &desc.MultiCreateAlgorithmResponseV1{
-		FailedBatches: failedBatches,
+		SucceededBatches: succeededBatches,
 	}
 
-	if len(failedBatches) == len(algoPacks) {
+	if len(succeededBatches) == 0 {
 		return res, status.Error(codes.Unavailable, "database issue: request failed")
 	}
 
-	if len(failedBatches) != 0 {
+	if len(succeededBatches) != len(algoPacks) {
 		return res, status.Error(codes.Unavailable, "database issue: request partially succeeded")
 	}
 
 	return res, status.Error(codes.OK, "")
 }
 
-func NewOvaAlgorithmApi(repo repo.Repo) desc.OvaAlgorithmApiServer {
-	return &api{repo: repo}
+func createAlgorithmIdPackV1(packIdx int, list []algorithm.Algorithm) *desc.AlgorithmIdPackV1 {
+	ids := make([]*desc.AlgorithmIdV1, 0, len(list))
+	for i := 0; i < len(list); i++ {
+		ids = append(ids, &desc.AlgorithmIdV1{
+			Id: int64(list[i].UserID),
+		})
+	}
+	return &desc.AlgorithmIdPackV1{
+		PackIdx: int32(packIdx),
+		Ids:     ids,
+	}
+}
+
+func NewOvaAlgorithmApi(repo repo.Repo, producer sarama.AsyncProducer) desc.OvaAlgorithmApiServer {
+	return &api{
+		repo:     repo,
+		producer: producer,
+	}
+}
+
+func (a *api) notifyKafkaAlgorithmOne(id uint64, op notification.CurOperation) {
+	opNotification := notification.NewCurNotification(id, op)
+
+	a.producer.Input() <- &sarama.ProducerMessage{
+		Topic: defaultTopicName,
+		Key:   sarama.ByteEncoder([]byte(strconv.FormatUint(id, 10))),
+		Value: opNotification,
+	}
+}
+
+func (a *api) notifyKafkaAlgorithmPack(list []algorithm.Algorithm, op notification.CurOperation) {
+	for i := 0; i < len(list); i++ {
+		a.notifyKafkaAlgorithmOne(list[i].UserID, op)
+	}
 }
 
 func validateOneInt32MaxRangeInt64(id int64) (uint64, error) {

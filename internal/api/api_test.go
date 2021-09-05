@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"errors"
+	saramaMocks "github.com/Shopify/sarama/mocks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,24 +17,30 @@ import (
 
 var _ = Describe("Api", func() {
 	var (
-		mockCtrl *gomock.Controller
-		mockRepo *mock_repo.MockRepo
-		s        desc.OvaAlgorithmApiServer
+		mockCtrl   *gomock.Controller
+		mockRepo   *mock_repo.MockRepo
+		notifyMock *saramaMocks.AsyncProducer
+		s          desc.OvaAlgorithmApiServer
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockRepo = mock_repo.NewMockRepo(mockCtrl)
-		s = api.NewOvaAlgorithmApi(mockRepo)
+		notifyMock = saramaMocks.NewAsyncProducer(GinkgoT(), nil)
+		//notifyMock.ExpectInputAndSucceed()
+		s = api.NewOvaAlgorithmApi(mockRepo, notifyMock)
 	})
 
 	AfterEach(func() {
+		notifyMock.Close()
 		mockCtrl.Finish()
 	})
 
 	When("database create request is successful", func() {
 		It("it should return nil error", func() {
 			algo := algorithm.CreateSimpleAlgorithm(0)
+
+			notifyMock.ExpectInputAndSucceed()
 
 			mockRepo.EXPECT().
 				AddAlgorithms([]algorithm.Algorithm{algo}).
@@ -67,6 +74,7 @@ var _ = Describe("Api", func() {
 					Description: algo.Description,
 				},
 			}
+
 			res, err := s.CreateAlgorithmV1(context.Background(), req)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.Unavailable, "database store failed")))
@@ -398,6 +406,8 @@ var _ = Describe("Api", func() {
 		It("it should return nil error", func() {
 			const id = 3
 
+			notifyMock.ExpectInputAndSucceed()
+
 			mockRepo.EXPECT().
 				RemoveAlgorithm(uint64(id)).
 				Return(true, nil).
@@ -505,6 +515,8 @@ var _ = Describe("Api", func() {
 	When("update were able to find entity", func() {
 		It("it should return nil error", func() {
 			algo := algorithm.CreateSimpleAlgorithm(1)
+
+			notifyMock.ExpectInputAndSucceed()
 
 			mockRepo.EXPECT().
 				UpdateAlgorithm(algo).
@@ -650,13 +662,15 @@ var _ = Describe("Api", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.Unavailable, "database issue: request failed")))
 			Expect(res).ToNot(BeNil())
-			Expect(res.FailedBatches).To(Equal([]int32{0, 1}))
+			Expect(len(res.SucceededBatches)).To(Equal(0))
 		})
 	})
 
 	When("database fails the first request of two", func() {
 		It("should return Unavailable with partially completed", func() {
 			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+
+			notifyMock.ExpectInputAndSucceed()
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
@@ -666,7 +680,10 @@ var _ = Describe("Api", func() {
 
 				mockRepo.EXPECT().
 					AddAlgorithms(algos1_3[2:3]).
-					Return(nil).
+					DoAndReturn(func(algos []algorithm.Algorithm) interface{} {
+						algos[0].UserID = 3
+						return nil
+					}).
 					Times(1),
 			)
 
@@ -680,23 +697,47 @@ var _ = Describe("Api", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.Unavailable, "database issue: request partially succeeded")))
 			Expect(res).ToNot(BeNil())
-			Expect(res.FailedBatches).To(Equal([]int32{0}))
+
+			succeededBunches := []*desc.AlgorithmIdPackV1{
+				{
+					PackIdx: 1,
+					Ids: []*desc.AlgorithmIdV1{
+						{
+							Id: 3,
+						},
+					},
+				},
+			}
+			Expect(res.SucceededBatches).To(Equal(succeededBunches))
 		})
 	})
 
 	When("all database request succeeded", func() {
-		It("should return Unavailable with partially completed", func() {
+		It("should return Success code with all bunches", func() {
 			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+
+			// 3 times in row
+			notifyMock.ExpectInputAndSucceed()
+			notifyMock.ExpectInputAndSucceed()
+			notifyMock.ExpectInputAndSucceed()
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
 					AddAlgorithms(algos1_3[0:2]).
+					DoAndReturn(func(algos []algorithm.Algorithm) interface{} {
+						algos[0].UserID = 1
+						algos[1].UserID = 2
+						return nil
+					}).
 					Return(nil).
 					Times(1),
 
 				mockRepo.EXPECT().
 					AddAlgorithms(algos1_3[2:3]).
-					Return(nil).
+					DoAndReturn(func(algos []algorithm.Algorithm) interface{} {
+						algos[0].UserID = 3
+						return nil
+					}).
 					Times(1),
 			)
 
@@ -709,7 +750,29 @@ var _ = Describe("Api", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res).ToNot(BeNil())
-			Expect(res.FailedBatches).To(Equal([]int32{}))
+
+			succeededBunches := []*desc.AlgorithmIdPackV1{
+				{
+					PackIdx: 0,
+					Ids: []*desc.AlgorithmIdV1{
+						{
+							Id: 1,
+						},
+						{
+							Id: 2,
+						},
+					},
+				},
+				{
+					PackIdx: 1,
+					Ids: []*desc.AlgorithmIdV1{
+						{
+							Id: 3,
+						},
+					},
+				},
+			}
+			Expect(res.SucceededBatches).To(Equal(succeededBunches))
 		})
 	})
 })

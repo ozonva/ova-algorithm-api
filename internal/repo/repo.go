@@ -51,6 +51,7 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 
 	sql, _, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
 		Insert(tableName).Columns(subjectColumn, descriptionColumn).
+		Suffix("RETURNING id").
 		Values("", "").ToSql()
 
 	if err != nil {
@@ -70,10 +71,27 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 	defer stmt.Close()
 
 	for i := 0; i < len(algorithms); i++ {
-		if _, err := stmt.Exec(algorithms[i].Subject, algorithms[i].Description); err != nil {
+		idsSql, err := stmt.Query(algorithms[i].Subject, algorithms[i].Description)
+		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("cannot fill prepared statement: %w", err)
 		}
+
+		if !idsSql.Next() {
+			tx.Rollback()
+			return fmt.Errorf("no ids returned: %w", idsSql.Err())
+		}
+
+		var id uint64
+		if err := idsSql.Scan(&id); err != nil {
+			idsSql.Close()
+			tx.Rollback()
+			return fmt.Errorf("cannot fill prepared statement: %w", err)
+		}
+
+		idsSql.Close()
+
+		algorithms[i].UserID = id
 	}
 
 	if err := tx.Commit(); err != nil {

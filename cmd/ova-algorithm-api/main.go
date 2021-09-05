@@ -21,12 +21,44 @@ import (
 	"database/sql"
 	_ "github.com/jackc/pgx/stdlib"
 
+	"github.com/Shopify/sarama"
 	"github.com/ozonva/ova-algorithm-api/internal/tracer"
 )
 
 const (
 	grpcPort = ":44555"
 )
+
+func newNotificationProducer(brokerList []string) (sarama.AsyncProducer, error) {
+	config := sarama.NewConfig()
+
+	config.Producer.RequiredAcks = sarama.WaitForLocal       // Only wait for the leader to ack
+	config.Producer.Flush.Frequency = 500 * time.Millisecond // Flush batches every 500ms
+	config.Producer.Return.Successes = true
+
+	producer, err := sarama.NewAsyncProducer(brokerList, config)
+	if err != nil {
+		return producer, err
+	}
+
+	// We will just log to STDOUT if we're not able to produce messages.
+	// Note: messages will only be returned here after all retry attempts are exhausted.
+	go func() {
+		for err := range producer.Errors() {
+			log.Warn().Err(err).Msg("failed to write to notification")
+		}
+	}()
+
+	go func() {
+		for suc := range producer.Successes() {
+			key, _ := suc.Key.Encode()
+			value, _ := suc.Key.Encode()
+			log.Debug().Bytes("key", key).Bytes("value", value).Msg("notification")
+		}
+	}()
+
+	return sarama.NewAsyncProducer(brokerList, config)
+}
 
 func run() error {
 	listen, err := net.Listen("tcp", grpcPort)
@@ -42,8 +74,19 @@ func run() error {
 
 	s := grpc.NewServer()
 	reflection.Register(s)
+
+	p, err := newNotificationProducer([]string{"localhost:9092"})
+	if err != nil {
+		log.Fatal().Msg("Failed to create a kafka producer")
+	}
+
+	if err != nil {
+		log.Fatal().Msg("Failed to create Kafka producer")
+	}
+
 	r := repo.NewRepo(db)
-	desc.RegisterOvaAlgorithmApiServer(s, api.NewOvaAlgorithmApi(r))
+	s.GracefulStop()
+	desc.RegisterOvaAlgorithmApiServer(s, api.NewOvaAlgorithmApi(r, p))
 
 	if err := s.Serve(listen); err != nil {
 		log.Err(err).Msg("failed to listen:")
