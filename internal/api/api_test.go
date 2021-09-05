@@ -1,8 +1,10 @@
 package api_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	saramaMocks "github.com/Shopify/sarama/mocks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -10,6 +12,7 @@ import (
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/api"
 	"github.com/ozonva/ova-algorithm-api/internal/mock_repo"
+	"github.com/ozonva/ova-algorithm-api/internal/notification"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,7 +43,8 @@ var _ = Describe("Api", func() {
 		It("it should return nil error", func() {
 			algo := algorithm.CreateSimpleAlgorithm(0)
 
-			notifyMock.ExpectInputAndSucceed()
+			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
+				createAlgorithmNotificationChecker(0, notification.OP_CREATE))
 
 			mockRepo.EXPECT().
 				AddAlgorithms([]algorithm.Algorithm{algo}).
@@ -406,7 +410,8 @@ var _ = Describe("Api", func() {
 		It("it should return nil error", func() {
 			const id = 3
 
-			notifyMock.ExpectInputAndSucceed()
+			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
+				createAlgorithmNotificationChecker(id, notification.OP_DELETE))
 
 			mockRepo.EXPECT().
 				RemoveAlgorithm(uint64(id)).
@@ -514,9 +519,12 @@ var _ = Describe("Api", func() {
 
 	When("update were able to find entity", func() {
 		It("it should return nil error", func() {
+			const id = 1
+
 			algo := algorithm.CreateSimpleAlgorithm(1)
 
-			notifyMock.ExpectInputAndSucceed()
+			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
+				createAlgorithmNotificationChecker(id, notification.OP_UPDATE))
 
 			mockRepo.EXPECT().
 				UpdateAlgorithm(algo).
@@ -670,7 +678,8 @@ var _ = Describe("Api", func() {
 		It("should return Unavailable with partially completed", func() {
 			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
 
-			notifyMock.ExpectInputAndSucceed()
+			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
+				createAlgorithmNotificationChecker(3, notification.OP_CREATE))
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
@@ -717,9 +726,12 @@ var _ = Describe("Api", func() {
 			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
 
 			// 3 times in row
-			notifyMock.ExpectInputAndSucceed()
-			notifyMock.ExpectInputAndSucceed()
-			notifyMock.ExpectInputAndSucceed()
+			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
+				createAlgorithmNotificationChecker(1, notification.OP_CREATE))
+			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
+				createAlgorithmNotificationChecker(2, notification.OP_CREATE))
+			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
+				createAlgorithmNotificationChecker(3, notification.OP_CREATE))
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
@@ -795,4 +807,19 @@ func convertAlgorithmListToAlgorithmValueV1List(input []algorithm.Algorithm) []*
 		})
 	}
 	return list
+}
+
+func createAlgorithmNotificationChecker(id uint64, op notification.CurOperation ) func([]byte) error {
+	return func(received []byte) error {
+		notify := notification.NewCurNotification(id, op)
+		expected, err := notify.Encode()
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(expected, received) {
+			return nil
+		}
+		return fmt.Errorf("notification are not equal to expected\n expected: %v\nreceived: %v",
+			expected, received)
+	}
 }
