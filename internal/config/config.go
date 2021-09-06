@@ -14,10 +14,10 @@ const (
 )
 
 type DSN struct {
-	User     string `json: user`
-	Password string `json: password`
-	Database string `json: database`
-	SslMode  string `json: sslmode`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Database string `json:"database"`
+	SslMode  string `json:"sslmode"`
 }
 
 func (dsn *DSN) MakeStr() string {
@@ -26,24 +26,24 @@ func (dsn *DSN) MakeStr() string {
 }
 
 type Broker struct {
-	Hostname string `json: hostname`
-	Port     uint16 `json: port`
-	Topic    string `json: topic`
+	Hostname string `json:"hostname"`
+	Port     uint16 `json:"port"`
+	Topic    string `json:"topic"`
 }
 
 type OvaAlgorithm struct {
-	Port   uint16 `json: port`
-	Dsn    DSN    `json: dsn`
-	Broker Broker `json: broker`
+	Port   uint16 `json:"port"`
+	Dsn    DSN    `json:"dsn"`
+	Broker Broker `json:"broker"`
 }
 
 type Prometheus struct {
-	Port uint16 `json: port`
+	Port uint16 `json:"port"`
 }
 
 type Config struct {
-	OvaAlgorithm OvaAlgorithm `json: ovaAlgorithm`
-	Prometheus   Prometheus   `json: prometheus`
+	OvaAlgorithm OvaAlgorithm `json:"ovaAlgorithm"`
+	Prometheus   Prometheus   `json:"prometheus"`
 }
 
 func (c *Config) Validate() error {
