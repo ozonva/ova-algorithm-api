@@ -14,11 +14,21 @@ all: generate build
 
 LOCAL_BIN:=$(CURDIR)/bin
 
+.PHONY: build
+
 build:
 	go build -o bin/main cmd/ova-algorithm-api/main.go
 
+.PHONY: run
+
 run:
 	go run cmd/ova-algorithm-api/main.go
+
+.PHONY: linter
+
+linter:
+	golangci-lint run
+
 
 .PHONY: generate
 

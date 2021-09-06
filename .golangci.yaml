@@ -24,7 +24,6 @@ linters:
     - stylecheck
     - tagliatelle
     - unused
-    - wrapcheck
     - gofmt
     - lll
     - noctx

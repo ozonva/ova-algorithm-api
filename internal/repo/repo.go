@@ -78,7 +78,7 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 	defer stmt.Close()
 
 	for i := 0; i < len(algorithms); i++ {
-		idsSql, err := stmt.Query(algorithms[i].Subject, algorithms[i].Description)
+		idsSQL, err := stmt.Query(algorithms[i].Subject, algorithms[i].Description)
 		if err != nil {
 			retErr := fmt.Errorf("cannot execute prepared statement: %w", err)
 
@@ -89,8 +89,8 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 			return retErr
 		}
 
-		if !idsSql.Next() {
-			retErr := fmt.Errorf("no id returned: %w", idsSql.Err())
+		if !idsSQL.Next() {
+			retErr := fmt.Errorf("no id returned: %w", idsSQL.Err())
 
 			if err := tx.Rollback(); err != nil {
 				retErr = fmt.Errorf("cannot rollback: %w", err)
@@ -100,10 +100,10 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 		}
 
 		var id uint64
-		if err := idsSql.Scan(&id); err != nil {
-			retErr := fmt.Errorf("cannot parse sql row: %w", idsSql.Err())
+		if err := idsSQL.Scan(&id); err != nil {
+			retErr := fmt.Errorf("cannot parse sql row: %w", idsSQL.Err())
 
-			if err := idsSql.Close(); err != nil {
+			if err := idsSQL.Close(); err != nil {
 				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
 			}
 
@@ -114,10 +114,10 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 		}
 
 		// verifies no values left, closes sql.Rows
-		if idsSql.Next() {
-			retErr := fmt.Errorf("unexpected values: %w", idsSql.Err())
+		if idsSQL.Next() {
+			retErr := fmt.Errorf("unexpected values: %w", idsSQL.Err())
 
-			if err := idsSql.Close(); err != nil {
+			if err := idsSQL.Close(); err != nil {
 				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
 			}
 

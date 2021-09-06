@@ -816,7 +816,7 @@ func createAlgorithmNotificationChecker(id uint64, op notification.CurOperation)
 		notify := notification.NewCurNotification(id, op)
 		expected, err := notify.Encode()
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot Encde() nofity: %w", err)
 		}
 		if bytes.Equal(expected, received) {
 			return nil
