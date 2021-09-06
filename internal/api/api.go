@@ -242,7 +242,7 @@ func (a *api) MultiCreateAlgorithmV1(
 	ctx context.Context,
 	req *desc.MultiCreateAlgorithmRequestV1,
 ) (*desc.MultiCreateAlgorithmResponseV1, error) {
-	parentSpan, ctx := opentracing.StartSpanFromContext(ctx, "MultiCreateAlgorithmV1")
+	parentSpan, _ := opentracing.StartSpanFromContext(ctx, "MultiCreateAlgorithmV1")
 	defer parentSpan.Finish()
 
 	parentSpan.LogKV("batchSize", req.BatchSize)

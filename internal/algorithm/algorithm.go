@@ -48,7 +48,7 @@ func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize uint) [][]Algorith
 // error is returned
 func AlgorithmSliceToMap(algorithms []Algorithm) (map[uint64]Algorithm, error) {
 	if len(algorithms) == 0 {
-		return make(map[uint64]Algorithm, 0), nil
+		return make(map[uint64]Algorithm), nil
 	}
 
 	resultMap := make(map[uint64]Algorithm, len(algorithms))

@@ -65,31 +65,66 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 
 	stmt, err := tx.Prepare(sql)
 	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to build sql template: %w", err)
+		retErr := fmt.Errorf("failed to build sql template: %w", err)
+
+		if err := tx.Rollback(); err != nil {
+			retErr = fmt.Errorf("cannot rollback: %w", err)
+		}
+
+		return retErr
 	}
 	defer stmt.Close()
 
 	for i := 0; i < len(algorithms); i++ {
 		idsSql, err := stmt.Query(algorithms[i].Subject, algorithms[i].Description)
 		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("cannot fill prepared statement: %w", err)
+			retErr := fmt.Errorf("cannot execute prepared statement: %w", err)
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+
+			return retErr
 		}
 
 		if !idsSql.Next() {
-			tx.Rollback()
-			return fmt.Errorf("no ids returned: %w", idsSql.Err())
+			retErr := fmt.Errorf("no id returned: %w", idsSql.Err())
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+
+			return retErr
 		}
 
 		var id uint64
 		if err := idsSql.Scan(&id); err != nil {
-			idsSql.Close()
-			tx.Rollback()
-			return fmt.Errorf("cannot fill prepared statement: %w", err)
+			retErr := fmt.Errorf("cannot parse sql row: %w", idsSql.Err())
+
+			if err := idsSql.Close(); err != nil {
+				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
+			}
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+			return retErr
 		}
 
-		idsSql.Close()
+		// verifies no values left, closes sql.Rows
+		if idsSql.Next() {
+			retErr := fmt.Errorf("unexpected values: %w", idsSql.Err())
+
+			if err := idsSql.Close(); err != nil {
+				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
+			}
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+
+			return retErr
+		}
 
 		algorithms[i].UserID = id
 	}
