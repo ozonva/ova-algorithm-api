@@ -2,6 +2,7 @@ package algorithm
 
 import (
 	"fmt"
+	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 	"github.com/ozonva/ova-algorithm-api/internal/utils"
 )
 
@@ -13,7 +14,7 @@ type Algorithm struct {
 
 // SplitAlgorithmsToBulks splits slice of []int into chunks of len chunkSize
 func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize uint) [][]Algorithm {
-	const MaxInt = (^uint(0)) >> 1
+	const MaxInt = uint(numerics.MaxInt)
 	if chunkSize > MaxInt {
 		chunkSize = MaxInt
 	}

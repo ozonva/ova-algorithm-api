@@ -28,10 +28,6 @@ import (
 	"github.com/ozonva/ova-algorithm-api/internal/tracer"
 )
 
-const (
-	grpcPort = ":44555"
-)
-
 func newNotificationProducer(brokerList []string) (sarama.AsyncProducer, error) {
 	cfg := sarama.NewConfig()
 
@@ -128,7 +124,7 @@ type PrometheusService struct {
 	server *http.Server
 }
 
-func (p *PrometheusService)	Stop()  {
+func (p *PrometheusService) Stop() {
 	if p.server != nil {
 		if err := p.server.Shutdown(context.Background()); err != nil {
 			log.Error().Err(err).Msg("error occurred while stopping prometheus server")
@@ -138,13 +134,13 @@ func (p *PrometheusService)	Stop()  {
 	}
 }
 
-func (p *PrometheusService)	Start(cfg *config.Prometheus) {
+func (p *PrometheusService) Start(cfg *config.Prometheus) {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 
 	withPort := fmt.Sprintf(":%v", cfg.Port)
 	p.server = &http.Server{
-		Addr: withPort,
+		Addr:    withPort,
 		Handler: mux,
 	}
 
@@ -155,7 +151,7 @@ func (p *PrometheusService)	Start(cfg *config.Prometheus) {
 	}()
 }
 
-func (p *PrometheusService) applyCfg(cfg *config.Prometheus)  {
+func (p *PrometheusService) applyCfg(cfg *config.Prometheus) {
 	p.Stop()
 	p.Start(cfg)
 }

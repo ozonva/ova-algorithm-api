@@ -2,6 +2,7 @@ package algorithm
 
 import (
 	"fmt"
+	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 	"testing"
 )
 
@@ -147,11 +148,8 @@ func TestAlgorithmSplit5In3(t *testing.T) {
 }
 
 func TestAlgorithmSplit5InMaxUint(t *testing.T) {
-	const MaxUint = ^uint(0)
-	const MaxInt = int(MaxUint >> 1)
-
 	oneSlice := createTestAlgorithmSliceRangeInclusive(1, 5)
-	slices := SplitAlgorithmsToBulks(oneSlice, MaxUint)
+	slices := SplitAlgorithmsToBulks(oneSlice, numerics.MaxUint)
 
 	expectedSlices := [][]Algorithm{
 		createTestAlgorithmSliceRangeInclusive(1, 5),
