@@ -1,0 +1,33 @@
+run:
+  skip-dirs:
+    - pkg
+linters-settigs:
+  goconst:
+  goimports:
+    local-prefixes: github.com/ozonva/ova-algorithm-api
+  gosec:
+  staticcheck:
+    go: "1.17"
+  stylecheck:
+    go: "1.17"
+  tagliatelle:
+  unused:
+    go: "1.17"
+  wrapcheck:
+
+linters:
+  enable:
+    - goconst
+    - goimports
+    - gosec
+    - staticcheck
+    - stylecheck
+    - tagliatelle
+    - unused
+    - wrapcheck
+    - gofmt
+    - lll
+    - noctx
+    - sqlclosecheck
+    - tparallel
+    - unconvert

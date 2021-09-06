@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 	"testing"
+
+	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 )
 
 func nestedSlicesEqual(expected [][]int, received [][]int) bool {

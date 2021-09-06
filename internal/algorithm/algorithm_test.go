@@ -2,8 +2,9 @@ package algorithm
 
 import (
 	"fmt"
-	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 	"testing"
+
+	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 )
 
 func algorithmSlicesEqual(expected []Algorithm, got []Algorithm) bool {

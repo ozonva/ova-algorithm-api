@@ -2,12 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	"github.com/opentracing/opentracing-go"
-	"github.com/ozonva/ova-algorithm-api/internal/config"
-	"github.com/ozonva/ova-algorithm-api/internal/repo"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rs/zerolog/log"
 	"net"
 	"net/http"
 	"os"
@@ -15,17 +11,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Shopify/sarama"
+	_ "github.com/jackc/pgx/stdlib"
+	"github.com/opentracing/opentracing-go"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-
-	api "github.com/ozonva/ova-algorithm-api/internal/api"
-	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 	"google.golang.org/grpc/reflection"
 
-	"database/sql"
-	_ "github.com/jackc/pgx/stdlib"
-
-	"github.com/Shopify/sarama"
+	api "github.com/ozonva/ova-algorithm-api/internal/api"
+	"github.com/ozonva/ova-algorithm-api/internal/config"
+	"github.com/ozonva/ova-algorithm-api/internal/repo"
 	"github.com/ozonva/ova-algorithm-api/internal/tracer"
+	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func newNotificationProducer(brokerList []string) (sarama.AsyncProducer, error) {
@@ -36,18 +34,16 @@ func newNotificationProducer(brokerList []string) (sarama.AsyncProducer, error) 
 
 	producer, err := sarama.NewAsyncProducer(brokerList, cfg)
 	if err != nil {
-		return producer, err
+		return nil, fmt.Errorf("failed to create producer: %w", err)
 	}
 
-	// We will just log to STDOUT if we're not able to produce messages.
-	// Note: messages will only be returned here after all retry attempts are exhausted.
 	go func() {
 		for err := range producer.Errors() {
-			log.Warn().Err(err).Msg("failed to write to notification")
+			log.Warn().Err(err).Msg("failed to deliver to notification")
 		}
 	}()
 
-	return sarama.NewAsyncProducer(brokerList, cfg)
+	return producer, nil
 }
 
 type GrpcApp struct {
@@ -99,7 +95,7 @@ func (a *GrpcApp) Start(cfg *config.OvaAlgorithm) error {
 	}
 
 	r := repo.NewRepo(a.db)
-	desc.RegisterOvaAlgorithmApiServer(a.grpcServer, api.NewOvaAlgorithmApi(r, p))
+	desc.RegisterOvaAlgorithmApiServer(a.grpcServer, api.NewOvaAlgorithmAPI(r, p))
 
 	go func() {
 		if err := a.grpcServer.Serve(listener); err != nil {

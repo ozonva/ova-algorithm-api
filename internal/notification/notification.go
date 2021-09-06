@@ -5,9 +5,9 @@ import "encoding/json"
 type CurOperation string
 
 const (
-	OP_CREATE = CurOperation("create")
-	OP_UPDATE = CurOperation("update")
-	OP_DELETE = CurOperation("delete")
+	OpCreate = CurOperation("create")
+	OpUpdate = CurOperation("update")
+	OpDelete = CurOperation("delete")
 )
 
 func NewCurNotification(id uint64, op CurOperation) *CurNotification {

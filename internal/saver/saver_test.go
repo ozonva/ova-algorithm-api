@@ -1,13 +1,15 @@
 package saver_test
 
 import (
+	"time"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/mock_flusher"
-	saver "github.com/ozonva/ova-algorithm-api/internal/saver"
-	"time"
+	"github.com/ozonva/ova-algorithm-api/internal/saver"
 )
 
 var _ = Describe("Saver", func() {

@@ -3,9 +3,11 @@ package flusher_test
 import (
 	"errors"
 	"fmt"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/flusher"
 	"github.com/ozonva/ova-algorithm-api/internal/mock_repo"

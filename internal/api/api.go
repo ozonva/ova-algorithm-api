@@ -3,18 +3,20 @@ package api
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	"github.com/Shopify/sarama"
 	"github.com/opentracing/opentracing-go"
-	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
-	"github.com/ozonva/ova-algorithm-api/internal/notification"
-	"github.com/ozonva/ova-algorithm-api/internal/repo"
-	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"strconv"
+
+	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
+	"github.com/ozonva/ova-algorithm-api/internal/notification"
+	"github.com/ozonva/ova-algorithm-api/internal/repo"
+	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 )
 
 var regCounterCreateAlgorithm = prometheus.NewCounter(prometheus.CounterOpts{
@@ -89,7 +91,7 @@ func (a *api) CreateAlgorithmV1(
 		Uint64("UserID", algos[0].UserID).
 		Msg("CreateAlgorithmV1 UserID assigned")
 
-	a.notifyKafkaAlgorithmPack(algos, notification.OP_CREATE)
+	a.notifyKafkaAlgorithmPack(algos, notification.OpCreate)
 	regCounterCreateAlgorithm.Inc()
 
 	return res, status.Error(codes.OK, "")
@@ -196,7 +198,7 @@ func (a *api) RemoveAlgorithmV1(
 		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
 	}
 
-	a.notifyKafkaAlgorithmOne(id, notification.OP_DELETE)
+	a.notifyKafkaAlgorithmOne(id, notification.OpDelete)
 	regCounterDeleteAlgorithm.Inc()
 
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully removed")
@@ -232,7 +234,7 @@ func (a *api) UpdateAlgorithmV1(
 		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
 	}
 
-	a.notifyKafkaAlgorithmOne(entity.UserID, notification.OP_UPDATE)
+	a.notifyKafkaAlgorithmOne(entity.UserID, notification.OpUpdate)
 	regCounterUpdateAlgorithm.Inc()
 
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully updated")
@@ -301,8 +303,8 @@ func (a *api) MultiCreateAlgorithmV1(
 					Msg("failed to add batch")
 
 			} else {
-				succeededBatches = append(succeededBatches, createAlgorithmIdPackV1(i, algoPacks[i]))
-				a.notifyKafkaAlgorithmPack(algoPacks[i], notification.OP_CREATE)
+				succeededBatches = append(succeededBatches, createAlgorithmIDPackV1(i, algoPacks[i]))
+				a.notifyKafkaAlgorithmPack(algoPacks[i], notification.OpCreate)
 				regCounterCreateAlgorithm.Add(float64(len(algoPacks[i])))
 			}
 
@@ -325,7 +327,7 @@ func (a *api) MultiCreateAlgorithmV1(
 	return res, status.Error(codes.OK, "")
 }
 
-func createAlgorithmIdPackV1(packIdx int, list []algorithm.Algorithm) *desc.AlgorithmIdPackV1 {
+func createAlgorithmIDPackV1(packIdx int, list []algorithm.Algorithm) *desc.AlgorithmIdPackV1 {
 	ids := make([]*desc.AlgorithmIdV1, 0, len(list))
 	for i := 0; i < len(list); i++ {
 		ids = append(ids, &desc.AlgorithmIdV1{
@@ -338,7 +340,7 @@ func createAlgorithmIdPackV1(packIdx int, list []algorithm.Algorithm) *desc.Algo
 	}
 }
 
-func NewOvaAlgorithmApi(repo repo.Repo, producer sarama.AsyncProducer) desc.OvaAlgorithmApiServer {
+func NewOvaAlgorithmAPI(repo repo.Repo, producer sarama.AsyncProducer) desc.OvaAlgorithmApiServer {
 	return &api{
 		repo:     repo,
 		producer: producer,

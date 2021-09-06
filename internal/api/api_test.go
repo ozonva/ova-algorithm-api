@@ -5,17 +5,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	saramaMocks "github.com/Shopify/sarama/mocks"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/api"
 	"github.com/ozonva/ova-algorithm-api/internal/mock_repo"
 	"github.com/ozonva/ova-algorithm-api/internal/notification"
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var _ = Describe("Api", func() {
@@ -31,7 +33,7 @@ var _ = Describe("Api", func() {
 		mockRepo = mock_repo.NewMockRepo(mockCtrl)
 		notifyMock = saramaMocks.NewAsyncProducer(GinkgoT(), nil)
 		//notifyMock.ExpectInputAndSucceed()
-		s = api.NewOvaAlgorithmApi(mockRepo, notifyMock)
+		s = api.NewOvaAlgorithmAPI(mockRepo, notifyMock)
 	})
 
 	AfterEach(func() {
@@ -44,7 +46,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(0)
 
 			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
-				createAlgorithmNotificationChecker(0, notification.OP_CREATE))
+				createAlgorithmNotificationChecker(0, notification.OpCreate))
 
 			mockRepo.EXPECT().
 				AddAlgorithms([]algorithm.Algorithm{algo}).
@@ -88,18 +90,18 @@ var _ = Describe("Api", func() {
 
 	When("database describe can find entity", func() {
 		It("it should return found algorithm and nil error", func() {
-			algo := algorithm.CreateSimpleAlgorithm(1)
+			const id = 1
 
-			const algorithmId = 1
+			algo := algorithm.CreateSimpleAlgorithm(id)
 
 			mockRepo.EXPECT().
-				DescribeAlgorithm(uint64(algo.UserID)).
+				DescribeAlgorithm(algo.UserID).
 				Return(&algo, nil).
 				Times(1)
 
 			req := &desc.DescribeAlgorithmRequestV1{
 				Body: &desc.AlgorithmIdV1{
-					Id: algorithmId,
+					Id: id,
 				},
 			}
 
@@ -113,18 +115,18 @@ var _ = Describe("Api", func() {
 
 	When("database describe cannot find entity", func() {
 		It("it should return NotFound", func() {
-			algo := algorithm.CreateSimpleAlgorithm(1)
+			const id = 1
 
-			const algorithmId = 1
+			algo := algorithm.CreateSimpleAlgorithm(id)
 
 			mockRepo.EXPECT().
-				DescribeAlgorithm(uint64(algo.UserID)).
+				DescribeAlgorithm(algo.UserID).
 				Return(nil, nil).
 				Times(1)
 
 			req := &desc.DescribeAlgorithmRequestV1{
 				Body: &desc.AlgorithmIdV1{
-					Id: algorithmId,
+					Id: id,
 				},
 			}
 
@@ -137,18 +139,18 @@ var _ = Describe("Api", func() {
 
 	When("database describe got error while request", func() {
 		It("it should return Unavailable", func() {
-			algo := algorithm.CreateSimpleAlgorithm(1)
+			const id = 1
 
-			const algorithmId = 1
+			algo := algorithm.CreateSimpleAlgorithm(id)
 
 			mockRepo.EXPECT().
-				DescribeAlgorithm(uint64(algo.UserID)).
+				DescribeAlgorithm(algo.UserID).
 				Return(nil, errors.New("some error")).
 				Times(1)
 
 			req := &desc.DescribeAlgorithmRequestV1{
 				Body: &desc.AlgorithmIdV1{
-					Id: algorithmId,
+					Id: id,
 				},
 			}
 
@@ -162,11 +164,11 @@ var _ = Describe("Api", func() {
 
 	When("database describe go id(0) out of range", func() {
 		It("it should return OutOfRange", func() {
-			const algorithmId = 0
+			const id = 0
 
 			req := &desc.DescribeAlgorithmRequestV1{
 				Body: &desc.AlgorithmIdV1{
-					Id: algorithmId,
+					Id: id,
 				},
 			}
 
@@ -180,11 +182,11 @@ var _ = Describe("Api", func() {
 
 	When("database describe go id(2147483648) out of range", func() {
 		It("it should return OutOfRange", func() {
-			const algorithmId = 2147483648
+			const id = 2147483648
 
 			req := &desc.DescribeAlgorithmRequestV1{
 				Body: &desc.AlgorithmIdV1{
-					Id: algorithmId,
+					Id: id,
 				},
 			}
 
@@ -411,7 +413,7 @@ var _ = Describe("Api", func() {
 			const id = 3
 
 			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
-				createAlgorithmNotificationChecker(id, notification.OP_DELETE))
+				createAlgorithmNotificationChecker(id, notification.OpDelete))
 
 			mockRepo.EXPECT().
 				RemoveAlgorithm(uint64(id)).
@@ -524,7 +526,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(1)
 
 			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
-				createAlgorithmNotificationChecker(id, notification.OP_UPDATE))
+				createAlgorithmNotificationChecker(id, notification.OpUpdate))
 
 			mockRepo.EXPECT().
 				UpdateAlgorithm(algo).
@@ -646,7 +648,7 @@ var _ = Describe("Api", func() {
 
 	When("database fails all requests", func() {
 		It("should return Unavailable with all request failed", func() {
-			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+			algos1_3 := createAlgorithmRangeInclusiveZeroID(1, 3)
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
@@ -676,10 +678,10 @@ var _ = Describe("Api", func() {
 
 	When("database fails the first request of two", func() {
 		It("should return Unavailable with partially completed", func() {
-			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+			algos1_3 := createAlgorithmRangeInclusiveZeroID(1, 3)
 
 			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
-				createAlgorithmNotificationChecker(3, notification.OP_CREATE))
+				createAlgorithmNotificationChecker(3, notification.OpCreate))
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
@@ -723,15 +725,15 @@ var _ = Describe("Api", func() {
 
 	When("all database request succeeded", func() {
 		It("should return Success code with all bunches", func() {
-			algos1_3 := createAlgorithmRangeInclusiveZeroId(1, 3)
+			algos1_3 := createAlgorithmRangeInclusiveZeroID(1, 3)
 
 			// 3 times in row
 			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
-				createAlgorithmNotificationChecker(1, notification.OP_CREATE))
+				createAlgorithmNotificationChecker(1, notification.OpCreate))
 			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
-				createAlgorithmNotificationChecker(2, notification.OP_CREATE))
+				createAlgorithmNotificationChecker(2, notification.OpCreate))
 			notifyMock.ExpectInputWithCheckerFunctionAndSucceed(
-				createAlgorithmNotificationChecker(3, notification.OP_CREATE))
+				createAlgorithmNotificationChecker(3, notification.OpCreate))
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
@@ -789,7 +791,7 @@ var _ = Describe("Api", func() {
 	})
 })
 
-func createAlgorithmRangeInclusiveZeroId(begin, end int) []algorithm.Algorithm {
+func createAlgorithmRangeInclusiveZeroID(begin, end int) []algorithm.Algorithm {
 	list := algorithm.CreateSimpleAlgorithmListRangeInclusive(begin, end)
 	// clear ids
 	for i := 0; i < len(list); i++ {

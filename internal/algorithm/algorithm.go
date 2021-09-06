@@ -2,6 +2,7 @@ package algorithm
 
 import (
 	"fmt"
+
 	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 	"github.com/ozonva/ova-algorithm-api/internal/utils"
 )
@@ -54,12 +55,12 @@ func AlgorithmSliceToMap(algorithms []Algorithm) (map[uint64]Algorithm, error) {
 	resultMap := make(map[uint64]Algorithm, len(algorithms))
 
 	for i := 0; i < len(algorithms); i++ {
-		UserId := algorithms[i].UserID
-		_, found := resultMap[UserId]
+		id := algorithms[i].UserID
+		_, found := resultMap[id]
 		if !found {
-			resultMap[UserId] = algorithms[i]
+			resultMap[id] = algorithms[i]
 		} else {
-			return nil, fmt.Errorf("duplicate UserIDs: %v", UserId)
+			return nil, fmt.Errorf("duplicate UserIDs: %v", id)
 		}
 	}
 

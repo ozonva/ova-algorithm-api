@@ -3,9 +3,11 @@ package repo
 import (
 	"database/sql"
 	"fmt"
+
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 )
 
 const (

@@ -1,12 +1,14 @@
 package tracer
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go"
 	jaegercfg "github.com/uber/jaeger-client-go/config"
 	jaegerlog "github.com/uber/jaeger-client-go/log"
 	"github.com/uber/jaeger-lib/metrics"
-	"io"
 )
 
 func NewTracer() (opentracing.Tracer, io.Closer, error) {
@@ -29,5 +31,5 @@ func NewTracer() (opentracing.Tracer, io.Closer, error) {
 		jaegercfg.Metrics(jMetricsFactory),
 	)
 
-	return tracer, closer, err
+	return tracer, closer, fmt.Errorf("failed to screate tracer: %w", err)
 }
