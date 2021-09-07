@@ -381,7 +381,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.Unavailable, "database delete error")))
-			Expect(res).NotTo(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 
@@ -404,7 +404,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.NotFound, "identity not found")))
-			Expect(res).ToNot(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 
@@ -447,7 +447,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (0) is out of range 1 - 2,147,483,647")))
-			Expect(res).ToNot(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 
@@ -465,7 +465,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (2147483648) is out of range 1 - 2,147,483,647")))
-			Expect(res).ToNot(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 
@@ -490,7 +490,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.Unavailable, "database update error")))
-			Expect(res).NotTo(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 
@@ -515,7 +515,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.NotFound, "identity not found")))
-			Expect(res).ToNot(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 
@@ -564,7 +564,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (0) is out of range 1 - 2,147,483,647")))
-			Expect(res).ToNot(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 
@@ -584,7 +584,7 @@ var _ = Describe("Api", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(status.Error(codes.OutOfRange, "id (2147483648) is out of range 1 - 2,147,483,647")))
-			Expect(res).ToNot(BeNil())
+			Expect(res).To(BeNil())
 		})
 	})
 

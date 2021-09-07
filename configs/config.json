@@ -1,12 +1,12 @@
 {
+	"dsn": {
+		"user": "melkozer",
+		"password": "melkozer",
+		"database": "ova",
+		"sslmode": "disable"
+	},
 	"ovaAlgorithm": {
 		"port": 44555,
-		"dsn": {
-			"user": "melkozer",
-			"password": "melkozer",
-			"database": "ova",
-			"sslmode": "disable" 
-		},
 		"broker": {
 			"hostname" : "localhost",
 			"port" : 9092,

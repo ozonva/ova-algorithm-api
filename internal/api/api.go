@@ -50,10 +50,10 @@ type api struct {
 	producer sarama.AsyncProducer
 }
 
-func (a *api) Close() {
 
-}
-
+// CreateAlgorithmV1 is a handle for singular algorithm creation
+// It's creates an entity in provided database and returns response
+// containing id of created entity or an error
 func (a *api) CreateAlgorithmV1(
 	ctx context.Context,
 	req *desc.CreateAlgorithmRequestV1,
@@ -97,6 +97,8 @@ func (a *api) CreateAlgorithmV1(
 	return res, status.Error(codes.OK, "")
 }
 
+// DescribeAlgorithmV1 is a handle for to get singular algorithm description
+// by provided id or an error
 func (a *api) DescribeAlgorithmV1(
 	ctx context.Context,
 	req *desc.DescribeAlgorithmRequestV1,
@@ -130,6 +132,10 @@ func (a *api) DescribeAlgorithmV1(
 	return res, status.Error(codes.OK, "")
 }
 
+
+// ListAlgorithmsV1 is a handle for to get multiple algorithm ids
+// Algorithms are selected from the provided database with provided
+// size and offset
 func (a *api) ListAlgorithmsV1(
 	ctx context.Context,
 	req *desc.ListAlgorithmsRequestV1,
@@ -174,6 +180,9 @@ func (a *api) ListAlgorithmsV1(
 	return res, status.Error(codes.OK, "")
 }
 
+// RemoveAlgorithmV1 is a handle for to remove singular algorithm
+// from the database. An error is returned is algorithm is missing
+// or invalid arguments are provided
 func (a *api) RemoveAlgorithmV1(
 	ctx context.Context,
 	req *desc.RemoveAlgorithmRequestV1,
@@ -184,18 +193,18 @@ func (a *api) RemoveAlgorithmV1(
 
 	id, err := validateOneInt32MaxRangeInt64(req.Body.Id)
 	if err != nil {
-		return new(emptypb.Empty), status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
+		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
 	}
 
 	found, err := a.repo.RemoveAlgorithm(id)
 
 	if err != nil {
 		log.Warn().Err(err).Msg("error occurred while RemoveAlgorithms")
-		return new(emptypb.Empty), status.Error(codes.Unavailable, "database delete error")
+		return nil, status.Error(codes.Unavailable, "database delete error")
 	}
 
 	if !found {
-		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
+		return nil, status.Error(codes.NotFound, "identity not found")
 	}
 
 	a.notifyKafkaAlgorithmOne(id, notification.OpDelete)
@@ -204,6 +213,9 @@ func (a *api) RemoveAlgorithmV1(
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully removed")
 }
 
+// UpdateAlgorithmV1 is a handle for updating singular algorithm
+// in the database. An error is returned is algorithm is missing
+// or invalid arguments are provided
 func (a *api) UpdateAlgorithmV1(
 	ctx context.Context,
 	req *desc.UpdateAlgorithmRequestV1,
@@ -214,7 +226,7 @@ func (a *api) UpdateAlgorithmV1(
 
 	id, err := validateOneInt32MaxRangeInt64(req.Body.Id)
 	if err != nil {
-		return new(emptypb.Empty), status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
+		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
 	}
 
 	entity := algorithm.Algorithm{
@@ -227,11 +239,11 @@ func (a *api) UpdateAlgorithmV1(
 
 	if err != nil {
 		log.Warn().Err(err).Msg("error occurred while UpdateAlgorithmV1")
-		return new(emptypb.Empty), status.Error(codes.Unavailable, "database update error")
+		return nil, status.Error(codes.Unavailable, "database update error")
 	}
 
 	if !found {
-		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
+		return nil, status.Error(codes.NotFound, "identity not found")
 	}
 
 	a.notifyKafkaAlgorithmOne(entity.UserID, notification.OpUpdate)
@@ -240,6 +252,11 @@ func (a *api) UpdateAlgorithmV1(
 	return new(emptypb.Empty), status.Error(codes.OK, "successfully updated")
 }
 
+// MultiCreateAlgorithmV1 is a handle for multiple creation of algorithms
+// Provided algorithms are separated in bunches of provided size. Ids of
+// successfully created are reported back in the response. For partially
+// successful request Unavailable is returned with list of successfully
+// created bunches.
 func (a *api) MultiCreateAlgorithmV1(
 	ctx context.Context,
 	req *desc.MultiCreateAlgorithmRequestV1,
@@ -340,6 +357,7 @@ func createAlgorithmIDPackV1(packIdx int, list []algorithm.Algorithm) *desc.Algo
 	}
 }
 
+// NewOvaAlgorithmAPI creates is API of Algorithms
 func NewOvaAlgorithmAPI(repo repo.Repo, producer sarama.AsyncProducer) desc.OvaAlgorithmApiServer {
 	return &api{
 		repo:     repo,
