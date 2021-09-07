@@ -49,7 +49,7 @@ var _ = Describe("Api", func() {
 				createAlgorithmNotificationChecker(0, notification.OpCreate))
 
 			mockRepo.EXPECT().
-				AddAlgorithms([]algorithm.Algorithm{algo}).
+				AddAlgorithms(context.Background(), []algorithm.Algorithm{algo}).
 				Return(nil).
 				Times(1)
 
@@ -70,7 +70,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(0)
 
 			mockRepo.EXPECT().
-				AddAlgorithms([]algorithm.Algorithm{algo}).
+				AddAlgorithms(context.Background(), []algorithm.Algorithm{algo}).
 				Return(errors.New("cannot process sql")).
 				Times(1)
 
@@ -95,7 +95,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(id)
 
 			mockRepo.EXPECT().
-				DescribeAlgorithm(algo.UserID).
+				DescribeAlgorithm(context.Background(), algo.UserID).
 				Return(&algo, nil).
 				Times(1)
 
@@ -120,7 +120,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(id)
 
 			mockRepo.EXPECT().
-				DescribeAlgorithm(algo.UserID).
+				DescribeAlgorithm(context.Background(), algo.UserID).
 				Return(nil, nil).
 				Times(1)
 
@@ -144,7 +144,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(id)
 
 			mockRepo.EXPECT().
-				DescribeAlgorithm(algo.UserID).
+				DescribeAlgorithm(context.Background(), algo.UserID).
 				Return(nil, errors.New("some error")).
 				Times(1)
 
@@ -204,7 +204,7 @@ var _ = Describe("Api", func() {
 			const offset = 5
 
 			mockRepo.EXPECT().
-				ListAlgorithms(uint64(limit), uint64(offset)).
+				ListAlgorithms(context.Background(), uint64(limit), uint64(offset)).
 				Return(nil, errors.New("some error")).
 				Times(1)
 
@@ -229,7 +229,7 @@ var _ = Describe("Api", func() {
 			const offset = 5
 
 			mockRepo.EXPECT().
-				ListAlgorithms(uint64(limit), uint64(offset)).
+				ListAlgorithms(context.Background(), uint64(limit), uint64(offset)).
 				Return(nil, nil).
 				Times(1)
 
@@ -255,7 +255,7 @@ var _ = Describe("Api", func() {
 			const offset = 5
 
 			mockRepo.EXPECT().
-				ListAlgorithms(uint64(limit), uint64(offset)).
+				ListAlgorithms(context.Background(), uint64(limit), uint64(offset)).
 				Return(algos, nil).
 				Times(1)
 
@@ -367,7 +367,7 @@ var _ = Describe("Api", func() {
 			const id = 3
 
 			mockRepo.EXPECT().
-				RemoveAlgorithm(uint64(id)).
+				RemoveAlgorithm(context.Background(), uint64(id)).
 				Return(false, errors.New("some error")).
 				Times(1)
 
@@ -390,7 +390,7 @@ var _ = Describe("Api", func() {
 			const id = 3
 
 			mockRepo.EXPECT().
-				RemoveAlgorithm(uint64(id)).
+				RemoveAlgorithm(context.Background(), uint64(id)).
 				Return(false, nil).
 				Times(1)
 
@@ -416,7 +416,7 @@ var _ = Describe("Api", func() {
 				createAlgorithmNotificationChecker(id, notification.OpDelete))
 
 			mockRepo.EXPECT().
-				RemoveAlgorithm(uint64(id)).
+				RemoveAlgorithm(context.Background(), uint64(id)).
 				Return(true, nil).
 				Times(1)
 
@@ -474,7 +474,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(1)
 
 			mockRepo.EXPECT().
-				UpdateAlgorithm(algo).
+				UpdateAlgorithm(context.Background(), algo).
 				Return(false, errors.New("some error")).
 				Times(1)
 
@@ -499,7 +499,7 @@ var _ = Describe("Api", func() {
 			algo := algorithm.CreateSimpleAlgorithm(1)
 
 			mockRepo.EXPECT().
-				UpdateAlgorithm(algo).
+				UpdateAlgorithm(context.Background(), algo).
 				Return(false, nil).
 				Times(1)
 
@@ -529,7 +529,7 @@ var _ = Describe("Api", func() {
 				createAlgorithmNotificationChecker(id, notification.OpUpdate))
 
 			mockRepo.EXPECT().
-				UpdateAlgorithm(algo).
+				UpdateAlgorithm(context.Background(), algo).
 				Return(true, nil).
 				Times(1)
 
@@ -652,12 +652,12 @@ var _ = Describe("Api", func() {
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
-					AddAlgorithms(algos1_3[0:2]).
+					AddAlgorithms(context.Background(), algos1_3[0:2]).
 					Return(errors.New("some error")).
 					Times(1),
 
 				mockRepo.EXPECT().
-					AddAlgorithms(algos1_3[2:3]).
+					AddAlgorithms(context.Background(), algos1_3[2:3]).
 					Return(errors.New("some more error")).
 					Times(1),
 			)
@@ -685,13 +685,13 @@ var _ = Describe("Api", func() {
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
-					AddAlgorithms(algos1_3[0:2]).
+					AddAlgorithms(context.Background(), algos1_3[0:2]).
 					Return(errors.New("some error")).
 					Times(1),
 
 				mockRepo.EXPECT().
-					AddAlgorithms(algos1_3[2:3]).
-					DoAndReturn(func(algos []algorithm.Algorithm) interface{} {
+					AddAlgorithms(context.Background(), algos1_3[2:3]).
+					DoAndReturn(func(_ context.Context, algos []algorithm.Algorithm) interface{} {
 						algos[0].UserID = 3
 						return nil
 					}).
@@ -737,8 +737,8 @@ var _ = Describe("Api", func() {
 
 			gomock.InOrder(
 				mockRepo.EXPECT().
-					AddAlgorithms(algos1_3[0:2]).
-					DoAndReturn(func(algos []algorithm.Algorithm) interface{} {
+					AddAlgorithms(context.Background(), algos1_3[0:2]).
+					DoAndReturn(func(_ context.Context, algos []algorithm.Algorithm) interface{} {
 						algos[0].UserID = 1
 						algos[1].UserID = 2
 						return nil
@@ -747,8 +747,8 @@ var _ = Describe("Api", func() {
 					Times(1),
 
 				mockRepo.EXPECT().
-					AddAlgorithms(algos1_3[2:3]).
-					DoAndReturn(func(algos []algorithm.Algorithm) interface{} {
+					AddAlgorithms(context.Background(), algos1_3[2:3]).
+					DoAndReturn(func(_ context.Context, algos []algorithm.Algorithm) interface{} {
 						algos[0].UserID = 3
 						return nil
 					}).

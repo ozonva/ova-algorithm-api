@@ -5,6 +5,7 @@
 package mock_repo
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -35,75 +36,75 @@ func (m *MockRepo) EXPECT() *MockRepoMockRecorder {
 }
 
 // AddAlgorithms mocks base method.
-func (m *MockRepo) AddAlgorithms(algorithm []algorithm.Algorithm) error {
+func (m *MockRepo) AddAlgorithms(ctx context.Context, algorithm []algorithm.Algorithm) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddAlgorithms", algorithm)
+	ret := m.ctrl.Call(m, "AddAlgorithms", ctx, algorithm)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddAlgorithms indicates an expected call of AddAlgorithms.
-func (mr *MockRepoMockRecorder) AddAlgorithms(algorithm interface{}) *gomock.Call {
+func (mr *MockRepoMockRecorder) AddAlgorithms(ctx, algorithm interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAlgorithms", reflect.TypeOf((*MockRepo)(nil).AddAlgorithms), algorithm)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAlgorithms", reflect.TypeOf((*MockRepo)(nil).AddAlgorithms), ctx, algorithm)
 }
 
 // DescribeAlgorithm mocks base method.
-func (m *MockRepo) DescribeAlgorithm(algorithmID uint64) (*algorithm.Algorithm, error) {
+func (m *MockRepo) DescribeAlgorithm(ctx context.Context, algorithmID uint64) (*algorithm.Algorithm, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeAlgorithm", algorithmID)
+	ret := m.ctrl.Call(m, "DescribeAlgorithm", ctx, algorithmID)
 	ret0, _ := ret[0].(*algorithm.Algorithm)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeAlgorithm indicates an expected call of DescribeAlgorithm.
-func (mr *MockRepoMockRecorder) DescribeAlgorithm(algorithmID interface{}) *gomock.Call {
+func (mr *MockRepoMockRecorder) DescribeAlgorithm(ctx, algorithmID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlgorithm", reflect.TypeOf((*MockRepo)(nil).DescribeAlgorithm), algorithmID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlgorithm", reflect.TypeOf((*MockRepo)(nil).DescribeAlgorithm), ctx, algorithmID)
 }
 
 // ListAlgorithms mocks base method.
-func (m *MockRepo) ListAlgorithms(limit, offset uint64) ([]algorithm.Algorithm, error) {
+func (m *MockRepo) ListAlgorithms(ctx context.Context, limit, offset uint64) ([]algorithm.Algorithm, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAlgorithms", limit, offset)
+	ret := m.ctrl.Call(m, "ListAlgorithms", ctx, limit, offset)
 	ret0, _ := ret[0].([]algorithm.Algorithm)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListAlgorithms indicates an expected call of ListAlgorithms.
-func (mr *MockRepoMockRecorder) ListAlgorithms(limit, offset interface{}) *gomock.Call {
+func (mr *MockRepoMockRecorder) ListAlgorithms(ctx, limit, offset interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAlgorithms", reflect.TypeOf((*MockRepo)(nil).ListAlgorithms), limit, offset)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAlgorithms", reflect.TypeOf((*MockRepo)(nil).ListAlgorithms), ctx, limit, offset)
 }
 
 // RemoveAlgorithm mocks base method.
-func (m *MockRepo) RemoveAlgorithm(algorithmID uint64) (bool, error) {
+func (m *MockRepo) RemoveAlgorithm(ctx context.Context, algorithmID uint64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveAlgorithm", algorithmID)
+	ret := m.ctrl.Call(m, "RemoveAlgorithm", ctx, algorithmID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RemoveAlgorithm indicates an expected call of RemoveAlgorithm.
-func (mr *MockRepoMockRecorder) RemoveAlgorithm(algorithmID interface{}) *gomock.Call {
+func (mr *MockRepoMockRecorder) RemoveAlgorithm(ctx, algorithmID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAlgorithm", reflect.TypeOf((*MockRepo)(nil).RemoveAlgorithm), algorithmID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAlgorithm", reflect.TypeOf((*MockRepo)(nil).RemoveAlgorithm), ctx, algorithmID)
 }
 
 // UpdateAlgorithm mocks base method.
-func (m *MockRepo) UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error) {
+func (m *MockRepo) UpdateAlgorithm(ctx context.Context, algorithm algorithm.Algorithm) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAlgorithm", algorithm)
+	ret := m.ctrl.Call(m, "UpdateAlgorithm", ctx, algorithm)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateAlgorithm indicates an expected call of UpdateAlgorithm.
-func (mr *MockRepoMockRecorder) UpdateAlgorithm(algorithm interface{}) *gomock.Call {
+func (mr *MockRepoMockRecorder) UpdateAlgorithm(ctx, algorithm interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAlgorithm", reflect.TypeOf((*MockRepo)(nil).UpdateAlgorithm), algorithm)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAlgorithm", reflect.TypeOf((*MockRepo)(nil).UpdateAlgorithm), ctx, algorithm)
 }

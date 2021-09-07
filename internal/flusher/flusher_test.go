@@ -1,6 +1,7 @@
 package flusher_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -52,7 +53,7 @@ var _ = Describe("Flusher", func() {
 			It("should return nil", func() {
 				const listSize = 5
 				mockRepo.EXPECT().
-					AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
+					AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmList(listSize)).
 					Return(nil).
 					Times(1)
 				notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
@@ -64,7 +65,7 @@ var _ = Describe("Flusher", func() {
 			It("should return the same slice", func() {
 				const listSize = 5
 				mockRepo.EXPECT().
-					AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
+					AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmList(listSize)).
 					Return(errors.New("cannot save to repo")).
 					Times(1)
 				notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
@@ -93,7 +94,7 @@ var _ = Describe("Flusher", func() {
 				It("accept all and return nil", func() {
 					const listSize = 1
 					mockRepo.EXPECT().
-						AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
+						AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmList(listSize)).
 						Return(nil).
 						Times(1)
 					notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
@@ -105,7 +106,7 @@ var _ = Describe("Flusher", func() {
 				It("accept all and return nil", func() {
 					const listSize = 2
 					mockRepo.EXPECT().
-						AddAlgorithms(algorithm.CreateSimpleAlgorithmList(listSize)).
+						AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmList(listSize)).
 						Return(nil).
 						Times(1)
 					notFlushed := flush.Flush(algorithm.CreateSimpleAlgorithmList(listSize))
@@ -117,11 +118,11 @@ var _ = Describe("Flusher", func() {
 				It("accept all and return nil", func() {
 					gomock.InOrder(
 						mockRepo.EXPECT().
-							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 1)).
+							AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 1)).
 							Return(nil).
 							Times(1),
 						mockRepo.EXPECT().
-							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 2)).
+							AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 2)).
 							Return(nil).
 							Times(1),
 					)
@@ -137,7 +138,7 @@ var _ = Describe("Flusher", func() {
 					const listSize = 1
 					list := algorithm.CreateSimpleAlgorithmList(listSize)
 					mockRepo.EXPECT().
-						AddAlgorithms(list).
+						AddAlgorithms(context.Background(), list).
 						Return(fmt.Errorf("cannot flush to repo")).
 						Times(1)
 					notFlushed := flush.Flush(list)
@@ -152,15 +153,15 @@ var _ = Describe("Flusher", func() {
 					list := algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 4)
 					gomock.InOrder(
 						mockRepo.EXPECT().
-							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 1)).
+							AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 1)).
 							Return(nil).
 							Times(1),
 						mockRepo.EXPECT().
-							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 3)).
+							AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmListRangeInclusive(2, 3)).
 							Return(fmt.Errorf("cannot flush to repo")).
 							Times(1),
 						mockRepo.EXPECT().
-							AddAlgorithms(algorithm.CreateSimpleAlgorithmListRangeInclusive(4, 4)).
+							AddAlgorithms(context.Background(), algorithm.CreateSimpleAlgorithmListRangeInclusive(4, 4)).
 							Return(nil).
 							Times(1),
 					)
