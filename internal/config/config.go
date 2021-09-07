@@ -13,6 +13,7 @@ const (
 	defaultConfigPath = "configs/config.json"
 )
 
+// DSN are configuration used to connect to DB
 type DSN struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
@@ -20,39 +21,49 @@ type DSN struct {
 	SslMode  string `json:"sslmode"`
 }
 
+// MakeStr creates a string DNS for postgres SQL driver
 func (dsn *DSN) MakeStr() string {
 	return fmt.Sprintf("user=%v password=%v database=%v sslmode=%v",
 		dsn.User, dsn.Password, dsn.Database, dsn.SslMode)
 }
 
+// Broker are configuration parameters of kafka message broker
 type Broker struct {
 	Hostname string `json:"hostname"`
 	Port     uint16 `json:"port"`
 	Topic    string `json:"topic"`
 }
 
+// OvaAlgorithm are configuration parameters GRPC Algorithm services
 type OvaAlgorithm struct {
 	Port   uint16 `json:"port"`
 	Broker Broker `json:"broker"`
 }
 
+// Prometheus are configuration for prometheus metrics exporter
 type Prometheus struct {
 	Port uint16 `json:"port"`
 }
 
+// Config are configuration for the Application
 type Config struct {
 	Dsn          DSN          `json:"dsn"`
 	OvaAlgorithm OvaAlgorithm `json:"ovaAlgorithm"`
 	Prometheus   Prometheus   `json:"prometheus"`
 }
 
+// Validate checks configuration parameters are valid
 func (c *Config) Validate() error {
 	return nil
 }
 
+// MonitorConfig interface for configuration monitor
 type MonitorConfig interface {
+	// Stop asynchronously stops the monitor. Cannot be called twice.
 	Stop()
+	// Updates returns a channel reporting updated configs
 	Updates() <-chan *Config
+	// Errors returns a channel reporting errors
 	Errors() <-chan error
 }
 

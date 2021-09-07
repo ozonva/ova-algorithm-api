@@ -4,6 +4,9 @@ import (
 	"fmt"
 )
 
+// CreateSimpleAlgorithm generates an algorithm for test purposes.
+// All fields are generated as <filed_name><id>. The id is assigned
+// to itself
 func CreateSimpleAlgorithm(idx int) Algorithm {
 	return Algorithm{
 		UserID:      uint64(idx),
@@ -12,6 +15,8 @@ func CreateSimpleAlgorithm(idx int) Algorithm {
 	}
 }
 
+// CreateSimpleAlgorithmListRangeInclusive creates as closed range of
+// algorithms using CreateSimpleAlgorithm function
 func CreateSimpleAlgorithmListRangeInclusive(begin, end int) []Algorithm {
 	if end < begin {
 		panic(fmt.Sprintf("end(%v) should not less begin(%v)", end, begin))
@@ -24,6 +29,8 @@ func CreateSimpleAlgorithmListRangeInclusive(begin, end int) []Algorithm {
 	return list
 }
 
+// CreateSimpleAlgorithmList creates a list of algorithms with provided size
+// Values indexes stars with 1 and reaches provided number of values
 func CreateSimpleAlgorithmList(values int) []Algorithm {
 	return CreateSimpleAlgorithmListRangeInclusive(1, values)
 }

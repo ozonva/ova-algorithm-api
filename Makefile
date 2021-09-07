@@ -51,6 +51,11 @@ coverage:
 	go test -race -coverprofile=coverprofile.out ./... && \
 		go tool cover -html=coverprofile.out
 
+.PHONY: godoc
+
+godoc:
+	godoc -http=:6060
+
 .PHONY:	deps
 
 deps: .install-go-deps
@@ -76,8 +81,10 @@ deps: .install-go-deps
 	GOBIN=$(LOCAL_BIN) go get -d github.com/Shopify/sarama
 	GOBIN=$(LOCAL_BIN) go get -d github.com/fsnotify/fsnotify
 	GOBIN=$(LOCAL_BIN) go get -d github.com/etherlabsio/healthcheck/v2
+	GOBIN=$(LOCAL_BIN) go get -d golang.org/x/tools/cmd/godoc
 	GOBIN=$(LOCAL_BIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 	GOBIN=$(LOCAL_BIN) go install github.com/pressly/goose/v3/cmd/goose
 	GOBIN=$(LOCAL_BIN) go install github.com/onsi/ginkgo/ginkgo
+	GOBIN=$(LOCAL_BIN) go install golang.org/x/tools/cmd/godoc

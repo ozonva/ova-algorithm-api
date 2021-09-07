@@ -10,6 +10,7 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 )
 
+// NewTracer creates new jaeger tracer
 func NewTracer() (opentracing.Tracer, io.Closer, error) {
 	cfg := jaegercfg.Configuration{
 		ServiceName: "OvaAlgorithmApi",

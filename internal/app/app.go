@@ -26,12 +26,21 @@ import (
 	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 )
 
+// App is the interface application. Application can be started or restarted
+// using ApplyCfg function. Stop stops an application. Use Errors() to get a
+// channel reporting errors
 type App interface {
+	// ApplyCfg dynamically reconfigures configuration and restarts modules
+	// Which are affected by configuration change
 	ApplyCfg(cfg *config.Config) error
+	// Stop synchronously stops an application
 	Stop() error
+	// Errors returns a channel for getting errors. Please be aware that channel
+	// cannot be caches as it might change during restart of the application
 	Errors() <-chan error
 }
 
+// NewApp creates new empty App  which does nothing unless ApplyCfg is called
 func NewApp() App {
 	return &app{}
 }
@@ -45,7 +54,7 @@ type common struct {
 type app struct {
 	common     *common
 	grpcApp    grpcApp
-	monitoring MonitoringService
+	monitoring monitoringService
 }
 
 func (a *app) ApplyCfg(cfg *config.Config) error {
@@ -66,6 +75,7 @@ func (a *app) ApplyCfg(cfg *config.Config) error {
 
 	return nil
 }
+
 
 func (a *app) Stop() error {
 	var asyncErrors []error
@@ -207,12 +217,12 @@ func (a *grpcApp) Init(c *common, cfg *config.OvaAlgorithm) error {
 	return nil
 }
 
-type MonitoringService struct {
+type monitoringService struct {
 	common *common
 	server *http.Server
 }
 
-func (p *MonitoringService) Stop() error {
+func (p *monitoringService) Stop() error {
 	var err error
 	if p.server != nil {
 		if err = p.server.Shutdown(context.Background()); err != nil {
@@ -237,7 +247,7 @@ func createHealthCheckHandler(db *sql.DB) http.Handler {
 	)
 }
 
-func (p *MonitoringService) Init(c *common, cfg *config.Prometheus) {
+func (p *monitoringService) Init(c *common, cfg *config.Prometheus) {
 	p.common = c
 
 	mux := http.NewServeMux()

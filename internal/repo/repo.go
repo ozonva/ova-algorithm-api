@@ -38,6 +38,7 @@ type Repo interface {
 	UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error)
 }
 
+// NewRepo creates new Repo with provided database connection
 func NewRepo(db *sql.DB) Repo {
 	return &repo{db: db}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/ozonva/ova-algorithm-api/internal/utils"
 )
 
+// Algorithm is a struck representing text description of algorithm
 type Algorithm struct {
 	UserID      uint64
 	Subject     string

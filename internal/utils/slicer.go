@@ -7,6 +7,8 @@ const (
 	ZeroOrNegativeChunksSize
 )
 
+// CalculateChunks returns number of chunks required to
+// store `sliceSize` entities in `chunkSize` chunks
 func CalculateChunks(sliceSize int, chunkSize int) int {
 	quotient, remainder := sliceSize/chunkSize, sliceSize%chunkSize
 
