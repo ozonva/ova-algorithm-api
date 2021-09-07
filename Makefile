@@ -39,8 +39,17 @@ generate:
 	      --go_out=pkg --go_opt=paths=source_relative  \
 	      --go-grpc_out=pkg --go-grpc_opt=paths=source_relative \
 	      ova-algorithm-api/ova-algorithm-api.proto
+
+.PHONY: test
+
 test:
 	go test -race ./...
+
+.PHONY: coveage
+
+coverage:
+	go test -race -coverprofile=coverprofile.out ./... && \
+		go tool cover -html=coverprofile.out
 
 .PHONY:	deps
 
