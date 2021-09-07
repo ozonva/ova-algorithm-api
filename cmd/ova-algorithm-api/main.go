@@ -7,6 +7,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/ozonva/ova-algorithm-api/internal/app"
 	"github.com/ozonva/ova-algorithm-api/internal/config"
@@ -14,6 +15,14 @@ import (
 )
 
 func main() {
+
+	log.Logger = log.Output(&lumberjack.Logger{
+		Filename:   "ova-algorithm.log",
+		MaxSize:    100, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, //days
+	})
+
 	// Configure and enable tracer
 	tracer, closer, err := tracer.NewTracer()
 	if err != nil {
