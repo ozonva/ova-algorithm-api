@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/etherlabsio/healthcheck/v2"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
@@ -221,11 +222,27 @@ func (p *MonitoringService) Stop() error {
 	return err
 }
 
+func createHealthCheckHandler(db *sql.DB) http.Handler {
+	return healthcheck.Handler(
+
+		healthcheck.WithTimeout(5*time.Second),
+
+		healthcheck.WithChecker(
+			"database", healthcheck.CheckerFunc(
+				func(ctx context.Context) error {
+					return db.PingContext(ctx)
+				},
+			),
+		),
+	)
+}
+
 func (p *MonitoringService) Init(c *common, cfg *config.Prometheus) {
 	p.common = c
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/healthcheck", createHealthCheckHandler(c.db))
 
 	withPort := fmt.Sprintf(":%v", cfg.Port)
 	p.server = &http.Server{
