@@ -50,10 +50,6 @@ type api struct {
 	producer sarama.AsyncProducer
 }
 
-func (a *api) Close() {
-
-}
-
 func (a *api) CreateAlgorithmV1(
 	ctx context.Context,
 	req *desc.CreateAlgorithmRequestV1,
@@ -184,18 +180,18 @@ func (a *api) RemoveAlgorithmV1(
 
 	id, err := validateOneInt32MaxRangeInt64(req.Body.Id)
 	if err != nil {
-		return new(emptypb.Empty), status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
+		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
 	}
 
 	found, err := a.repo.RemoveAlgorithm(id)
 
 	if err != nil {
 		log.Warn().Err(err).Msg("error occurred while RemoveAlgorithms")
-		return new(emptypb.Empty), status.Error(codes.Unavailable, "database delete error")
+		return nil, status.Error(codes.Unavailable, "database delete error")
 	}
 
 	if !found {
-		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
+		return nil, status.Error(codes.NotFound, "identity not found")
 	}
 
 	a.notifyKafkaAlgorithmOne(id, notification.OpDelete)
@@ -214,7 +210,7 @@ func (a *api) UpdateAlgorithmV1(
 
 	id, err := validateOneInt32MaxRangeInt64(req.Body.Id)
 	if err != nil {
-		return new(emptypb.Empty), status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
+		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
 	}
 
 	entity := algorithm.Algorithm{
@@ -227,11 +223,11 @@ func (a *api) UpdateAlgorithmV1(
 
 	if err != nil {
 		log.Warn().Err(err).Msg("error occurred while UpdateAlgorithmV1")
-		return new(emptypb.Empty), status.Error(codes.Unavailable, "database update error")
+		return nil, status.Error(codes.Unavailable, "database update error")
 	}
 
 	if !found {
-		return new(emptypb.Empty), status.Error(codes.NotFound, "identity not found")
+		return nil, status.Error(codes.NotFound, "identity not found")
 	}
 
 	a.notifyKafkaAlgorithmOne(entity.UserID, notification.OpUpdate)
