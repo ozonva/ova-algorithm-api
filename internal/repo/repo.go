@@ -78,53 +78,12 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 	defer stmt.Close()
 
 	for i := 0; i < len(algorithms); i++ {
-		idsSQL, err := stmt.Query(algorithms[i].Subject, algorithms[i].Description)
+		id, err := addAlgorithmQuery(stmt, algorithms[i])
 		if err != nil {
-			retErr := fmt.Errorf("cannot execute prepared statement: %w", err)
-
+			retErr := fmt.Errorf("cannot add algorithm: %w", err)
 			if err := tx.Rollback(); err != nil {
 				retErr = fmt.Errorf("cannot rollback: %w", err)
 			}
-
-			return retErr
-		}
-
-		if !idsSQL.Next() {
-			retErr := fmt.Errorf("no id returned: %w", idsSQL.Err())
-
-			if err := tx.Rollback(); err != nil {
-				retErr = fmt.Errorf("cannot rollback: %w", err)
-			}
-
-			return retErr
-		}
-
-		var id uint64
-		if err := idsSQL.Scan(&id); err != nil {
-			retErr := fmt.Errorf("cannot parse sql row: %w", idsSQL.Err())
-
-			if err := idsSQL.Close(); err != nil {
-				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
-			}
-
-			if err := tx.Rollback(); err != nil {
-				retErr = fmt.Errorf("cannot rollback: %w", err)
-			}
-			return retErr
-		}
-
-		// verifies no values left, closes sql.Rows
-		if idsSQL.Next() {
-			retErr := fmt.Errorf("unexpected values: %w", idsSQL.Err())
-
-			if err := idsSQL.Close(); err != nil {
-				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
-			}
-
-			if err := tx.Rollback(); err != nil {
-				retErr = fmt.Errorf("cannot rollback: %w", err)
-			}
-
 			return retErr
 		}
 
@@ -136,6 +95,25 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 	}
 
 	return nil
+}
+
+func addAlgorithmQuery(stmt *sql.Stmt, a algorithm.Algorithm) (uint64, error) {
+	idsSQL, err := stmt.Query(a.Subject, a.Description)
+	if err != nil {
+		return 0, fmt.Errorf("cannot execute prepared statement: %w", err)
+	}
+	defer idsSQL.Close()
+
+	if !idsSQL.Next() {
+		return 0, fmt.Errorf("no id returned: %w", idsSQL.Err())
+	}
+
+	var id uint64
+	if err := idsSQL.Scan(&id); err != nil {
+		return 0, fmt.Errorf("cannot parse sql row: %w", err)
+	}
+
+	return id, nil
 }
 
 func (r *repo) ListAlgorithms(limit, offset uint64) ([]algorithm.Algorithm, error) {

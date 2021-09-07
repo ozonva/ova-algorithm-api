@@ -1,7 +1,6 @@
 package tracer
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/opentracing/opentracing-go"
@@ -26,10 +25,8 @@ func NewTracer() (opentracing.Tracer, io.Closer, error) {
 	jLogger := jaegerlog.StdLogger
 	jMetricsFactory := metrics.NullFactory
 
-	tracer, closer, err := cfg.NewTracer(
+	return cfg.NewTracer(
 		jaegercfg.Logger(jLogger),
 		jaegercfg.Metrics(jMetricsFactory),
 	)
-
-	return tracer, closer, fmt.Errorf("failed to screate tracer: %w", err)
 }

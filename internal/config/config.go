@@ -33,7 +33,6 @@ type Broker struct {
 
 type OvaAlgorithm struct {
 	Port   uint16 `json:"port"`
-	Dsn    DSN    `json:"dsn"`
 	Broker Broker `json:"broker"`
 }
 
@@ -42,6 +41,7 @@ type Prometheus struct {
 }
 
 type Config struct {
+	Dsn          DSN          `json:"dsn"`
 	OvaAlgorithm OvaAlgorithm `json:"ovaAlgorithm"`
 	Prometheus   Prometheus   `json:"prometheus"`
 }
@@ -117,6 +117,16 @@ func (m *monitorConfig) onNewConfig(config *Config) {
 	}
 }
 
+func (m *monitorConfig) tryToReadConfigAndNotifyResult() {
+	config, err := m.readConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot read config")
+		m.errors <- err
+	} else {
+		m.onNewConfig(config)
+	}
+}
+
 func (m *monitorConfig) watch() {
 	defer close(m.updates)
 
@@ -131,11 +141,8 @@ func (m *monitorConfig) watch() {
 		log.Fatal().Err(err).Msg("cannot create config watcher")
 	}
 
-	config, err := m.readConfig()
-	if err != nil {
-		log.Fatal().Err(err).Msg("cannot read config")
-	}
-	m.onNewConfig(config)
+	//read initially without any notification
+	m.tryToReadConfigAndNotifyResult()
 
 	for {
 		select {
@@ -149,12 +156,7 @@ func (m *monitorConfig) watch() {
 			}
 			log.Debug().Str("name", event.Name).Str("op", event.Op.String()).Msg("new event")
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				config, err := m.readConfig()
-				if err != nil {
-					log.Error().Err(err).Msg("cannot read config")
-					break
-				}
-				m.onNewConfig(config)
+				m.tryToReadConfigAndNotifyResult()
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
