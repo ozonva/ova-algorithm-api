@@ -1,118 +1,171 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
-	"github.com/ozonva/ova-algorithm-api/internal/repo"
-	"github.com/rs/zerolog/log"
-	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/Shopify/sarama"
+	_ "github.com/jackc/pgx/stdlib"
+	"github.com/opentracing/opentracing-go"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-
-	api "github.com/ozonva/ova-algorithm-api/internal/api"
-	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
 	"google.golang.org/grpc/reflection"
 
-	"database/sql"
-	_ "github.com/jackc/pgx/stdlib"
+	api "github.com/ozonva/ova-algorithm-api/internal/api"
+	"github.com/ozonva/ova-algorithm-api/internal/config"
+	"github.com/ozonva/ova-algorithm-api/internal/repo"
+	"github.com/ozonva/ova-algorithm-api/internal/tracer"
+	desc "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const (
-	grpcPort = ":44555"
-)
+func newNotificationProducer(brokerList []string) (sarama.AsyncProducer, error) {
+	cfg := sarama.NewConfig()
 
-func run() error {
-	listen, err := net.Listen("tcp", grpcPort)
+	cfg.Producer.RequiredAcks = sarama.WaitForLocal
+	cfg.Producer.Flush.Frequency = 500 * time.Millisecond
+
+	producer, err := sarama.NewAsyncProducer(brokerList, cfg)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to listen:")
+		return nil, fmt.Errorf("failed to create producer: %w", err)
 	}
 
-	dsn := "user=melkozer password=melkozer dbname=ova sslmode=disable"
-	db, err := sql.Open("pgx", dsn)
+	go func() {
+		for err := range producer.Errors() {
+			log.Warn().Err(err).Msg("failed to deliver to notification")
+		}
+	}()
+
+	return producer, nil
+}
+
+type GrpcApp struct {
+	grpcServer *grpc.Server
+	producer   sarama.AsyncProducer
+	db         *sql.DB
+}
+
+func (a *GrpcApp) Stop() {
+	if a.grpcServer != nil {
+		a.grpcServer.GracefulStop()
+		a.grpcServer = nil
+	}
+	if a.producer != nil {
+		if err := a.producer.Close(); err != nil {
+			log.Error().Err(err).Msg("error occurred while closing kafka producer")
+			// error dropped intentionally
+		}
+		a.producer = nil
+	}
+	if a.db != nil {
+		if err := a.db.Close(); err != nil {
+			log.Error().Err(err).Msg("error occurred while closing db connection")
+			// error dropped intentionally
+		}
+		a.db = nil
+	}
+}
+
+func (a *GrpcApp) Start(cfg *config.OvaAlgorithm) error {
+	var err error
+	a.db, err = sql.Open("pgx", cfg.Dsn.MakeStr())
 	if err != nil {
 		return fmt.Errorf("cannot open database connection: %w", err)
 	}
 
-	s := grpc.NewServer()
-	reflection.Register(s)
-	r := repo.NewRepo(db)
-	desc.RegisterOvaAlgorithmApiServer(s, api.NewOvaAlgorithmApi(r))
+	a.grpcServer = grpc.NewServer()
+	reflection.Register(a.grpcServer)
 
-	if err := s.Serve(listen); err != nil {
-		log.Err(err).Msg("failed to listen:")
+	brokerAddr := fmt.Sprintf("%v:%v", cfg.Broker.Hostname, cfg.Broker.Port)
+	p, err := newNotificationProducer([]string{brokerAddr})
+	if err != nil {
+		return fmt.Errorf("cannot create kafka producer: %w", err)
 	}
+
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", cfg.Port))
+	if err != nil {
+		return fmt.Errorf("cannot listen to port: %w", err)
+	}
+
+	r := repo.NewRepo(a.db)
+	desc.RegisterOvaAlgorithmApiServer(a.grpcServer, api.NewOvaAlgorithmAPI(r, p))
+
+	go func() {
+		if err := a.grpcServer.Serve(listener); err != nil {
+			log.Error().Err(err).Msg("grpcServer stopped with error")
+		}
+	}()
 
 	return nil
 }
 
-type Config struct{}
-
-func readConfig(path string) (*Config, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open file \"%v\"", path)
+func (a *GrpcApp) applyCfg(cfg *config.OvaAlgorithm) error {
+	a.Stop()
+	if err := a.Start(cfg); err != nil {
+		log.Error().Err(err).Msg("failed to start OvaAlgorithm Service")
+		a.Stop() //Clean-up
+		return fmt.Errorf("failed to start OvaAlgorithm Service: %w", err)
 	}
-	defer file.Close()
-
-	data := make([]byte, 256)
-
-	for {
-		count, err := file.Read(data)
-
-		if count > 0 {
-			fmt.Printf("%s", data[:count])
-		}
-
-		if err != nil {
-			if err == io.EOF {
-
-				break
-			} else {
-				return nil, fmt.Errorf("error occured while config \"%v\": %w", path, err)
-			}
-		}
-	}
-
-	// TODO: remove stub
-	return &Config{}, nil
+	return nil
 }
 
-func monitorConfig() <-chan *Config {
-	c := make(chan *Config)
+type PrometheusService struct {
+	server *http.Server
+}
+
+func (p *PrometheusService) Stop() {
+	if p.server != nil {
+		if err := p.server.Shutdown(context.Background()); err != nil {
+			log.Error().Err(err).Msg("error occurred while stopping prometheus server")
+			// error dropped intentionally
+		}
+		p.server = nil
+	}
+}
+
+func (p *PrometheusService) Start(cfg *config.Prometheus) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+
+	withPort := fmt.Sprintf(":%v", cfg.Port)
+	p.server = &http.Server{
+		Addr:    withPort,
+		Handler: mux,
+	}
 
 	go func() {
-		for {
-			newConfig, err := readConfig("configs/config.json")
-
-			if err != nil {
-				fmt.Printf("update Config failed: %v\n", err.Error())
-			}
-			// TODO: add comparison configs as soon as settings added to Config
-			// if newConfig != oldConfig {
-			c <- newConfig
-			// }
-
-			time.Sleep(3600 * time.Second)
+		if err := p.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("prometheus")
 		}
 	}()
+}
 
-	return c
+func (p *PrometheusService) applyCfg(cfg *config.Prometheus) {
+	p.Stop()
+	p.Start(cfg)
 }
 
 func main() {
-	fmt.Println("ova-algorithm-api")
+	// Configure and enable tracer
+	tracer, closer, err := tracer.NewTracer()
+	if err != nil {
+		log.Fatal().Msg("cannot start tracer")
+	}
+	opentracing.SetGlobalTracer(tracer)
+	defer closer.Close()
 
-	configUpdates := monitorConfig()
+	configMonitor := config.NewMonitorConfig(nil)
+	defer configMonitor.Stop()
 
-	go func() {
-		if err := run(); err != nil {
-			log.Error().Err(err).Msg("error during service")
-		}
-	}()
+	app := GrpcApp{}
+	prometheus := PrometheusService{}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -120,10 +173,17 @@ func main() {
 	for {
 		select {
 		case sig := <-sigs:
-			log.Log().Msgf("%v signal received. terminating...", sig)
+			log.Info().Msgf("%v signal received. terminating...", sig)
 			return
-		case <-configUpdates:
-			log.Log().Msg("new config received")
+		case cfg := <-configMonitor.Updates():
+			log.Debug().Msg("new config received")
+			if err := app.applyCfg(&cfg.OvaAlgorithm); err != nil {
+				log.Fatal().Err(err).Msg("cannot apply Ova Algorithm config")
+			}
+			prometheus.applyCfg(&cfg.Prometheus)
+
+		case err := <-configMonitor.Errors():
+			log.Fatal().Err(err).Msg("error occurred in config reader")
 		}
 	}
 }

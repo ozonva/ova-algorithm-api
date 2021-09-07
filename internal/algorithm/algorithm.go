@@ -2,6 +2,8 @@ package algorithm
 
 import (
 	"fmt"
+
+	"github.com/ozonva/ova-algorithm-api/internal/numerics"
 	"github.com/ozonva/ova-algorithm-api/internal/utils"
 )
 
@@ -13,7 +15,7 @@ type Algorithm struct {
 
 // SplitAlgorithmsToBulks splits slice of []int into chunks of len chunkSize
 func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize uint) [][]Algorithm {
-	const MaxInt = (^uint(0)) >> 1
+	const MaxInt = uint(numerics.MaxInt)
 	if chunkSize > MaxInt {
 		chunkSize = MaxInt
 	}
@@ -47,18 +49,18 @@ func SplitAlgorithmsToBulks(algorithms []Algorithm, chunkSize uint) [][]Algorith
 // error is returned
 func AlgorithmSliceToMap(algorithms []Algorithm) (map[uint64]Algorithm, error) {
 	if len(algorithms) == 0 {
-		return make(map[uint64]Algorithm, 0), nil
+		return make(map[uint64]Algorithm), nil
 	}
 
 	resultMap := make(map[uint64]Algorithm, len(algorithms))
 
 	for i := 0; i < len(algorithms); i++ {
-		UserId := algorithms[i].UserID
-		_, found := resultMap[UserId]
+		id := algorithms[i].UserID
+		_, found := resultMap[id]
 		if !found {
-			resultMap[UserId] = algorithms[i]
+			resultMap[id] = algorithms[i]
 		} else {
-			return nil, fmt.Errorf("duplicate UserIDs: %v", UserId)
+			return nil, fmt.Errorf("duplicate UserIDs: %v", id)
 		}
 	}
 

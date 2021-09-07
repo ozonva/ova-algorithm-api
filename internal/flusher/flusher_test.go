@@ -3,9 +3,11 @@ package flusher_test
 import (
 	"errors"
 	"fmt"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/flusher"
 	"github.com/ozonva/ova-algorithm-api/internal/mock_repo"
@@ -147,7 +149,6 @@ var _ = Describe("Flusher", func() {
 		Context("error on second flush of tree flushes", func() {
 			When("list one of five element", func() {
 				It("returns list of all input algorithms if cannot flush", func() {
-					const listSize = 1
 					list := algorithm.CreateSimpleAlgorithmListRangeInclusive(0, 4)
 					gomock.InOrder(
 						mockRepo.EXPECT().

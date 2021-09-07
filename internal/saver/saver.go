@@ -2,10 +2,11 @@ package saver
 
 import (
 	"errors"
-	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
-	"github.com/ozonva/ova-algorithm-api/internal/flusher"
 	"sync"
 	"time"
+
+	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
+	"github.com/ozonva/ova-algorithm-api/internal/flusher"
 )
 
 type Saver interface {

@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-//import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
 option go_package = "github.com/ozonva/ova-algorithm-api/pkg/ova-algorithm-api;ova_algorithm_api";
@@ -9,7 +8,7 @@ package ova.algorithm.api;
 
 service OvaAlgorithmApi {
 
-  rpc CreateAlgorithmV1(CreateAlgorithmRequestV1) returns (google.protobuf.Empty) {
+  rpc CreateAlgorithmV1(CreateAlgorithmRequestV1) returns (CreateAlgorithmResponseV1) {
   }
 
   rpc DescribeAlgorithmV1(DescribeAlgorithmRequestV1) returns (DescribeAlgorithmResponseV1) {
@@ -19,6 +18,12 @@ service OvaAlgorithmApi {
   }
 
   rpc RemoveAlgorithmV1(RemoveAlgorithmRequestV1) returns (google.protobuf.Empty) {
+  }
+
+  rpc UpdateAlgorithmV1(UpdateAlgorithmRequestV1) returns (google.protobuf.Empty) {
+  }
+
+  rpc MultiCreateAlgorithmV1(MultiCreateAlgorithmRequestV1) returns (MultiCreateAlgorithmResponseV1) {
   }
 }
 
@@ -41,6 +46,10 @@ message CreateAlgorithmRequestV1 {
   AlgorithmValueV1 body = 1;
 }
 
+message CreateAlgorithmResponseV1 {
+  optional AlgorithmIdV1 body = 1;
+}
+
 message DescribeAlgorithmRequestV1 {
   AlgorithmIdV1 body = 1;
 }
@@ -60,4 +69,22 @@ message ListAlgorithmsResponseV1 {
 
 message RemoveAlgorithmRequestV1 {
   AlgorithmIdV1 body = 1;
+}
+
+message UpdateAlgorithmRequestV1 {
+  AlgorithmV1 body = 1;
+}
+
+message MultiCreateAlgorithmRequestV1 {
+  repeated AlgorithmValueV1 pack = 1;
+  int32 batch_size = 2;
+}
+
+message AlgorithmIdPackV1 {
+  int32 pack_idx = 1;
+  repeated AlgorithmIdV1 ids = 2;
+}
+
+message MultiCreateAlgorithmResponseV1 {
+  repeated AlgorithmIdPackV1 succeeded_batches = 1;
 }

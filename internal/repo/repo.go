@@ -3,9 +3,11 @@ package repo
 import (
 	"database/sql"
 	"fmt"
+
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 )
 
 const (
@@ -29,6 +31,11 @@ type Repo interface {
 
 	// RemoveAlgorithm returns found id entity has been removed and error
 	RemoveAlgorithm(algorithmID uint64) (bool, error)
+
+	// UpdateAlgorithm updates fields of algorithm. Algorithm is selected
+	// provided id. If no algorithm exists nothing is updates and false is
+	// returned as the first return value
+	UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error)
 }
 
 func NewRepo(db *sql.DB) Repo {
@@ -46,6 +53,7 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 
 	sql, _, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
 		Insert(tableName).Columns(subjectColumn, descriptionColumn).
+		Suffix("RETURNING id").
 		Values("", "").ToSql()
 
 	if err != nil {
@@ -59,16 +67,68 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 
 	stmt, err := tx.Prepare(sql)
 	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to build sql template: %w", err)
+		retErr := fmt.Errorf("failed to build sql template: %w", err)
+
+		if err := tx.Rollback(); err != nil {
+			retErr = fmt.Errorf("cannot rollback: %w", err)
+		}
+
+		return retErr
 	}
 	defer stmt.Close()
 
 	for i := 0; i < len(algorithms); i++ {
-		if _, err := stmt.Exec(algorithms[i].Subject, algorithms[i].Description); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("cannot fill prepared statement: %w", err)
+		idsSQL, err := stmt.Query(algorithms[i].Subject, algorithms[i].Description)
+		if err != nil {
+			retErr := fmt.Errorf("cannot execute prepared statement: %w", err)
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+
+			return retErr
 		}
+
+		if !idsSQL.Next() {
+			retErr := fmt.Errorf("no id returned: %w", idsSQL.Err())
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+
+			return retErr
+		}
+
+		var id uint64
+		if err := idsSQL.Scan(&id); err != nil {
+			retErr := fmt.Errorf("cannot parse sql row: %w", idsSQL.Err())
+
+			if err := idsSQL.Close(); err != nil {
+				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
+			}
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+			return retErr
+		}
+
+		// verifies no values left, closes sql.Rows
+		if idsSQL.Next() {
+			retErr := fmt.Errorf("unexpected values: %w", idsSQL.Err())
+
+			if err := idsSQL.Close(); err != nil {
+				retErr = fmt.Errorf("cannot close sql.Rows: %w", err)
+			}
+
+			if err := tx.Rollback(); err != nil {
+				retErr = fmt.Errorf("cannot rollback: %w", err)
+			}
+
+			return retErr
+		}
+
+		algorithms[i].UserID = id
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -157,4 +217,25 @@ func (r *repo) RemoveAlgorithm(algorithmID uint64) (bool, error) {
 	}
 
 	return deletedRows > 0, nil
+}
+
+func (r *repo) UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error) {
+	result, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
+		Update(tableName).
+		Set(subjectColumn, algorithm.Subject).
+		Set(descriptionColumn, algorithm.Description).
+		Where(sq.Eq{idColumn: algorithm.UserID}).
+		RunWith(r.db).
+		Exec()
+
+	if err != nil {
+		return false, fmt.Errorf("cannot run delete query: %w", err)
+	}
+
+	updatedRows, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("cannot get rows affected: %w", err)
+	}
+
+	return updatedRows > 0, nil
 }

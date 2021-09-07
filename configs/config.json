@@ -1,10 +1,19 @@
 {
-	"version": 1,
-	"sliceSize": 32,
-	"longFiller1": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-	"longFiller2": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-	"longFiller3": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-	"longFiller4": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-	"longFiller5": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-	"longFiller6": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	"ovaAlgorithm": {
+		"port": 44555,
+		"dsn": {
+			"user": "melkozer",
+			"password": "melkozer",
+			"database": "ova",
+			"sslmode": "disable" 
+		},
+		"broker": {
+			"hostname" : "localhost",
+			"port" : 9092,
+			"topic": "ova.algorithm.notify"
+		}
+	},
+	"prometheus": {
+		"port": 23112
+	}
 }

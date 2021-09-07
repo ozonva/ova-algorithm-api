@@ -1,6 +1,10 @@
 package utils
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ozonva/ova-algorithm-api/internal/numerics"
+)
 
 func nestedSlicesEqual(expected [][]int, received [][]int) bool {
 	if len(expected) != len(received) {
@@ -126,11 +130,8 @@ func TestSplit5In3(t *testing.T) {
 }
 
 func TestSplit5InMaxInt(t *testing.T) {
-	const MaxUint = ^uint(0)
-	const MaxInt = int(MaxUint >> 1)
-
 	oneSlice := []int{1, 2, 3, 4, 5}
-	slices, err := SplitToChunksInt(oneSlice, MaxInt)
+	slices, err := SplitToChunksInt(oneSlice, numerics.MaxInt)
 	if err != NoError {
 		t.Fatalf("error %v retuned from SplitToChunksInt ", err)
 	}
