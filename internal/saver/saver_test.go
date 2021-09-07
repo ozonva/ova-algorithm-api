@@ -1,13 +1,12 @@
 package saver_test
 
 import (
+	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/mock_flusher"
 	"github.com/ozonva/ova-algorithm-api/internal/saver"
 )
@@ -35,44 +34,62 @@ var _ = Describe("Saver", func() {
 		const Capacity = 2
 		const FlushPeriod = 2 * time.Second
 
-		BeforeEach(func() {
-			s = saver.NewSaver(Capacity, mocFlusher, FlushPeriod)
-		})
-
 		AfterEach(func() {
 			s.Stop()
 		})
 
+		AssertSizeWithConfiguredCapacity := func(size int) {
+			length, capacity := s.GetLenAndCap()
+			Expect(length).To(Equal(size))
+			Expect(capacity).To(Equal(Capacity))
+		}
+
 		When("no data is added to the store", func() {
-			BeforeEach(func() {
-				By("initially asserting the zero-sized storage with configured capacity")
-				length, capacity := s.GetLenAndCap()
-				Expect(length).To(Equal(0))
-				Expect(capacity).To(Equal(Capacity))
-			})
-
-			AfterEach(func() {
-				By("finally asserting the zero-sized storage with configured capacity")
-				length, capacity := s.GetLenAndCap()
-				Expect(length).To(Equal(0))
-				Expect(capacity).To(Equal(Capacity))
-			})
-
 			It("shall not call flush after 1.5 flush period", func() {
-				sleepUntil(startTime.Add(FlushPeriod * 3 / 2))
+				By("starting saver", func() {
+					s = saver.NewSaver(Capacity, mocFlusher, FlushPeriod)
+				})
+
+				By("initially asserting the zero-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(0)
+				})
+
+				By("waiting storage has flushed after 1.5 flush period", func() {
+					sleepUntil(startTime.Add(FlushPeriod * 3 / 2))
+				})
+
+				By("finally asserting the zero-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(0)
+				})
 			})
 
 			It("shall not call flush after explicit Close call", func() {
-				s.Close()
+				By("starting saver", func() {
+					s = saver.NewSaver(Capacity, mocFlusher, FlushPeriod)
+				})
+
+				By("initially asserting the zero-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(0)
+				})
+
+				By("explicitly calling close", func() {
+					s.Close()
+				})
+
+				By("finally asserting the zero-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(0)
+				})
 			})
 		})
 
 		When("one entity has been added to the storage", func() {
-			BeforeEach(func() {
+			AssertOneAdded := func() {
+				By("starting saver", func() {
+					s = saver.NewSaver(Capacity, mocFlusher, FlushPeriod)
+				})
+
 				By("initially asserting the zero-sized storage with configured capacity", func() {
-					length, capacity := s.GetLenAndCap()
-					Expect(length).To(Equal(0))
-					Expect(capacity).To(Equal(Capacity))
+					AssertSizeWithConfiguredCapacity(0)
 				})
 
 				By("saving algorithm[1] to the storage", func() {
@@ -81,18 +98,9 @@ var _ = Describe("Saver", func() {
 				})
 
 				By("asserting the one-sized storage with configured capacity", func() {
-					length, capacity := s.GetLenAndCap()
-					Expect(length).To(Equal(1))
-					Expect(capacity).To(Equal(Capacity))
+					AssertSizeWithConfiguredCapacity(1)
 				})
-			})
-
-			AfterEach(func() {
-				By("finally asserting the zero-sized storage with configured capacity")
-				length, capacity := s.GetLenAndCap()
-				Expect(length).To(Equal(0))
-				Expect(capacity).To(Equal(Capacity))
-			})
+			}
 
 			It("shall flush entities on timeout", func() {
 				By("configuring flush mock to flush all on list of 1", func() {
@@ -103,8 +111,14 @@ var _ = Describe("Saver", func() {
 						Times(1)
 				})
 
+				AssertOneAdded()
+
 				By("waiting storage has flushed after 1.5 flush period", func() {
 					sleepUntil(startTime.Add(FlushPeriod * 3 / 2))
+				})
+
+				By("finally asserting the zero-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(0)
 				})
 			})
 
@@ -117,8 +131,14 @@ var _ = Describe("Saver", func() {
 						Times(1)
 				})
 
+				AssertOneAdded()
+
 				By("explicitly calling s.Close()", func() {
 					s.Close()
+				})
+
+				By("finally asserting the zero-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(0)
 				})
 			})
 
@@ -131,19 +151,28 @@ var _ = Describe("Saver", func() {
 						Times(1)
 				})
 
+				AssertOneAdded()
+
 				By("saving 2 and checking it's result", func() {
 					err := s.Save(algorithm.CreateSimpleAlgorithm(2))
 					Expect(err).ShouldNot(HaveOccurred())
+				})
+
+				By("asserting the zero-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(0)
 				})
 			})
 		})
 
 		When("storage is full", func() {
-			BeforeEach(func() {
+
+			AssertStorageIsFull := func() {
+				By("starting saver", func() {
+					s = saver.NewSaver(Capacity, mocFlusher, FlushPeriod)
+				})
+
 				By("initially asserting the zero-sized storage with configured capacity", func() {
-					length, capacity := s.GetLenAndCap()
-					Expect(length).To(Equal(0))
-					Expect(capacity).To(Equal(Capacity))
+					AssertSizeWithConfiguredCapacity(0)
 				})
 
 				By("saving algorithm[1] to the storage", func() {
@@ -152,11 +181,20 @@ var _ = Describe("Saver", func() {
 				})
 
 				By("asserting the one-sized storage with configured capacity", func() {
-					length, capacity := s.GetLenAndCap()
-					Expect(length).To(Equal(1))
-					Expect(capacity).To(Equal(Capacity))
+					AssertSizeWithConfiguredCapacity(1)
 				})
 
+				By("saving algorithm[2] to the storage", func() {
+					err := s.Save(algorithm.CreateSimpleAlgorithm(2))
+					Expect(err).ShouldNot(HaveOccurred())
+				})
+
+				By("asserting the two-sized storage with configured capacity", func() {
+					AssertSizeWithConfiguredCapacity(2)
+				})
+			}
+
+			It("shall fail Save to the storage", func() {
 				By("configuring flush mock to fail flush on list of 1,2", func() {
 					listOf12 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
 					mocFlusher.EXPECT().
@@ -165,38 +203,39 @@ var _ = Describe("Saver", func() {
 						Times(1)
 				})
 
-				By("saving algorithm[2] to the storage", func() {
-					err := s.Save(algorithm.CreateSimpleAlgorithm(2))
-					Expect(err).ShouldNot(HaveOccurred())
-				})
+				AssertStorageIsFull()
 
-				By("asserting the one-sized storage with configured capacity", func() {
-					length, capacity := s.GetLenAndCap()
-					Expect(length).To(Equal(2))
-					Expect(capacity).To(Equal(Capacity))
-				})
-			})
-
-			It("shall fail Save to the storage", func() {
 				By("calling Save with algorithm[3]", func() {
 					err := s.Save(algorithm.CreateSimpleAlgorithm(3))
 					Expect(err).Should(HaveOccurred())
 				})
 
 				By("asserting storage is still full", func() {
-					length, capacity := s.GetLenAndCap()
-					Expect(length).To(Equal(2))
-					Expect(capacity).To(Equal(Capacity))
+					AssertSizeWithConfiguredCapacity(Capacity)
 				})
 			})
 
 			It("shall flush the storage after 1.5 flush period", func() {
-				By("configuring flush mock to flush all on list of 1,2", func() {
+				By("configuring flush mock to fail flush all on list of 1,2 on the first attempt and"+
+					"succeed on the second", func() {
 					listOf12 := algorithm.CreateSimpleAlgorithmListRangeInclusive(1, 2)
-					mocFlusher.EXPECT().
-						Flush(listOf12).
-						Return(nil).
-						Times(1)
+					gomock.InOrder(
+						mocFlusher.EXPECT().
+							Flush(listOf12).
+							Return(listOf12).
+							Times(1),
+						mocFlusher.EXPECT().
+							Flush(listOf12).
+							Return(nil).
+							Times(1),
+					)
+				})
+
+				AssertStorageIsFull()
+
+				By("failing algorithm[3] to the storage", func() {
+					err := s.Save(algorithm.CreateSimpleAlgorithm(3))
+					Expect(err).Should(HaveOccurred())
 				})
 
 				By("waiting storage has flushed after 1.5 flush period", func() {
@@ -204,9 +243,7 @@ var _ = Describe("Saver", func() {
 				})
 
 				By("asserting storage is empty", func() {
-					length, capacity := s.GetLenAndCap()
-					Expect(length).To(Equal(0))
-					Expect(capacity).To(Equal(Capacity))
+					AssertSizeWithConfiguredCapacity(0)
 				})
 			})
 		})
