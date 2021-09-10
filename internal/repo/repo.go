@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -21,21 +22,21 @@ type Repo interface {
 
 	// AddAlgorithms adds new entities to the repo. Ids are assigned by
 	// the store
-	AddAlgorithms(algorithm []algorithm.Algorithm) error
+	AddAlgorithms(ctx context.Context, algorithm []algorithm.Algorithm) error
 
 	// ListAlgorithms return list of entities provided limit and offset
-	ListAlgorithms(limit, offset uint64) ([]algorithm.Algorithm, error)
+	ListAlgorithms(ctx context.Context, limit, offset uint64) ([]algorithm.Algorithm, error)
 
 	// DescribeAlgorithm returns entity details for provided algorithmID
-	DescribeAlgorithm(algorithmID uint64) (*algorithm.Algorithm, error)
+	DescribeAlgorithm(ctx context.Context, algorithmID uint64) (*algorithm.Algorithm, error)
 
 	// RemoveAlgorithm returns found id entity has been removed and error
-	RemoveAlgorithm(algorithmID uint64) (bool, error)
+	RemoveAlgorithm(ctx context.Context, algorithmID uint64) (bool, error)
 
 	// UpdateAlgorithm updates fields of algorithm. Algorithm is selected
 	// provided id. If no algorithm exists nothing is updates and false is
 	// returned as the first return value
-	UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error)
+	UpdateAlgorithm(ctx context.Context, algorithm algorithm.Algorithm) (bool, error)
 }
 
 // NewRepo creates new Repo with provided database connection
@@ -47,7 +48,7 @@ type repo struct {
 	db *sql.DB
 }
 
-func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
+func (r *repo) AddAlgorithms(ctx context.Context, algorithms []algorithm.Algorithm) error {
 	if len(algorithms) == 0 {
 		return nil
 	}
@@ -61,12 +62,13 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 		return fmt.Errorf("failed to build sql template: %w", err)
 	}
 
-	tx, err := r.db.Begin()
+
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failer to start transaction: %w", err)
 	}
 
-	stmt, err := tx.Prepare(sql)
+	stmt, err := tx.PrepareContext(ctx, sql)
 	if err != nil {
 		retErr := fmt.Errorf("failed to build sql template: %w", err)
 
@@ -79,7 +81,7 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 	defer stmt.Close()
 
 	for i := 0; i < len(algorithms); i++ {
-		id, err := addAlgorithmQuery(stmt, algorithms[i])
+		id, err := addAlgorithmQuery(ctx, stmt, algorithms[i])
 		if err != nil {
 			retErr := fmt.Errorf("cannot add algorithm: %w", err)
 			if err := tx.Rollback(); err != nil {
@@ -98,8 +100,8 @@ func (r *repo) AddAlgorithms(algorithms []algorithm.Algorithm) error {
 	return nil
 }
 
-func addAlgorithmQuery(stmt *sql.Stmt, a algorithm.Algorithm) (uint64, error) {
-	idsSQL, err := stmt.Query(a.Subject, a.Description)
+func addAlgorithmQuery(ctx context.Context, stmt *sql.Stmt, a algorithm.Algorithm) (uint64, error) {
+	idsSQL, err := stmt.QueryContext(ctx, a.Subject, a.Description)
 	if err != nil {
 		return 0, fmt.Errorf("cannot execute prepared statement: %w", err)
 	}
@@ -117,13 +119,13 @@ func addAlgorithmQuery(stmt *sql.Stmt, a algorithm.Algorithm) (uint64, error) {
 	return id, nil
 }
 
-func (r *repo) ListAlgorithms(limit, offset uint64) ([]algorithm.Algorithm, error) {
+func (r *repo) ListAlgorithms(ctx context.Context, limit, offset uint64) ([]algorithm.Algorithm, error) {
 	users, err := sq.Select("*").
 		From(tableName).
 		OrderBy(idColumn).
 		Limit(limit).
 		Offset(offset).
-		RunWith(r.db).Query()
+		RunWith(r.db).QueryContext(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("cannot run list query: %w", err)
@@ -148,13 +150,13 @@ func (r *repo) ListAlgorithms(limit, offset uint64) ([]algorithm.Algorithm, erro
 	return algorithms, nil
 }
 
-func (r *repo) DescribeAlgorithm(algorithmID uint64) (*algorithm.Algorithm, error) {
+func (r *repo) DescribeAlgorithm(ctx context.Context, algorithmID uint64) (*algorithm.Algorithm, error) {
 	users, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
 		Select("*").
 		From(tableName).
 		Where(sq.Eq{idColumn: algorithmID}).
 		RunWith(r.db).
-		Query()
+		QueryContext(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("cannot run describe query: %w", err)
@@ -178,13 +180,13 @@ func (r *repo) DescribeAlgorithm(algorithmID uint64) (*algorithm.Algorithm, erro
 	return algo, nil
 }
 
-func (r *repo) RemoveAlgorithm(algorithmID uint64) (bool, error) {
+func (r *repo) RemoveAlgorithm(ctx context.Context, algorithmID uint64) (bool, error) {
 	result, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
 		Delete("").
 		From(tableName).
 		Where(sq.Eq{idColumn: algorithmID}).
 		RunWith(r.db).
-		Exec()
+		ExecContext(ctx)
 
 	if err != nil {
 		return false, fmt.Errorf("cannot run delete query: %w", err)
@@ -198,14 +200,14 @@ func (r *repo) RemoveAlgorithm(algorithmID uint64) (bool, error) {
 	return deletedRows > 0, nil
 }
 
-func (r *repo) UpdateAlgorithm(algorithm algorithm.Algorithm) (bool, error) {
+func (r *repo) UpdateAlgorithm(ctx context.Context, algorithm algorithm.Algorithm) (bool, error) {
 	result, err := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).
 		Update(tableName).
 		Set(subjectColumn, algorithm.Subject).
 		Set(descriptionColumn, algorithm.Description).
 		Where(sq.Eq{idColumn: algorithm.UserID}).
 		RunWith(r.db).
-		Exec()
+		ExecContext(ctx)
 
 	if err != nil {
 		return false, fmt.Errorf("cannot run delete query: %w", err)

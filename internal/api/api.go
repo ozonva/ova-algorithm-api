@@ -74,7 +74,7 @@ func (a *api) CreateAlgorithmV1(
 
 	res := &desc.CreateAlgorithmResponseV1{}
 
-	if err := a.repo.AddAlgorithms(algos); err != nil {
+	if err := a.repo.AddAlgorithms(ctx, algos); err != nil {
 		log.Warn().Err(err).
 			Str("subject", body.Subject).
 			Str("description", body.Description).
@@ -112,7 +112,7 @@ func (a *api) DescribeAlgorithmV1(
 		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
 	}
 
-	algo, err := a.repo.DescribeAlgorithm(id)
+	algo, err := a.repo.DescribeAlgorithm(ctx, id)
 
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "database fetch error")
@@ -155,7 +155,7 @@ func (a *api) ListAlgorithmsV1(
 		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("limit %v", err.Error()))
 	}
 
-	list, err := a.repo.ListAlgorithms(limit, id)
+	list, err := a.repo.ListAlgorithms(ctx, limit, id)
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "database list error")
 	}
@@ -196,7 +196,7 @@ func (a *api) RemoveAlgorithmV1(
 		return nil, status.Error(codes.OutOfRange, fmt.Sprintf("id %v", err.Error()))
 	}
 
-	found, err := a.repo.RemoveAlgorithm(id)
+	found, err := a.repo.RemoveAlgorithm(ctx, id)
 
 	if err != nil {
 		log.Warn().Err(err).Msg("error occurred while RemoveAlgorithms")
@@ -235,7 +235,7 @@ func (a *api) UpdateAlgorithmV1(
 		Description: req.Body.Description,
 	}
 
-	found, err := a.repo.UpdateAlgorithm(entity)
+	found, err := a.repo.UpdateAlgorithm(ctx, entity)
 
 	if err != nil {
 		log.Warn().Err(err).Msg("error occurred while UpdateAlgorithmV1")
@@ -261,7 +261,7 @@ func (a *api) MultiCreateAlgorithmV1(
 	ctx context.Context,
 	req *desc.MultiCreateAlgorithmRequestV1,
 ) (*desc.MultiCreateAlgorithmResponseV1, error) {
-	parentSpan, _ := opentracing.StartSpanFromContext(ctx, "MultiCreateAlgorithmV1")
+	parentSpan := opentracing.StartSpan("MultiCreateAlgorithmV1")
 	defer parentSpan.Finish()
 
 	parentSpan.LogKV("batchSize", req.BatchSize)
@@ -310,10 +310,11 @@ func (a *api) MultiCreateAlgorithmV1(
 			childSpan := opentracing.StartSpan(
 				"AddAlgorithms",
 				opentracing.ChildOf(parentSpan.Context()))
+			defer childSpan.Finish()
 
 			childSpan.LogKV("batchSize", len(algoPacks[i]))
 
-			if err := a.repo.AddAlgorithms(algoPacks[i]); err != nil {
+			if err := a.repo.AddAlgorithms(ctx, algoPacks[i]); err != nil {
 				log.Warn().Err(err).
 					Int("index", i).
 					Int("batchSize", len(algoPacks[i])).
@@ -324,8 +325,6 @@ func (a *api) MultiCreateAlgorithmV1(
 				a.notifyKafkaAlgorithmPack(algoPacks[i], notification.OpCreate)
 				regCounterCreateAlgorithm.Add(float64(len(algoPacks[i])))
 			}
-
-			defer childSpan.Finish()
 		}()
 	}
 

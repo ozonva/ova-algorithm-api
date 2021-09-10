@@ -1,6 +1,8 @@
 package flusher
 
 import (
+	"context"
+
 	"github.com/ozonva/ova-algorithm-api/internal/algorithm"
 	"github.com/ozonva/ova-algorithm-api/internal/repo"
 )
@@ -29,7 +31,7 @@ func (f *flusher) Flush(algorithmsInput []algorithm.Algorithm) []algorithm.Algor
 	var failedAlgorithms []algorithm.Algorithm
 
 	for i := 0; i < len(bulks); i++ {
-		if err := f.algorithmRepo.AddAlgorithms(bulks[i]); err != nil {
+		if err := f.algorithmRepo.AddAlgorithms(context.Background(), bulks[i]); err != nil {
 			failedAlgorithms = append(failedAlgorithms, bulks[i]...)
 		}
 	}

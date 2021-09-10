@@ -82,6 +82,7 @@ deps: .install-go-deps
 	GOBIN=$(LOCAL_BIN) go get -d github.com/fsnotify/fsnotify
 	GOBIN=$(LOCAL_BIN) go get -d github.com/etherlabsio/healthcheck/v2
 	GOBIN=$(LOCAL_BIN) go get -d golang.org/x/tools/cmd/godoc
+	GOBIN=$(LOCAL_BIN) go get -d gopkg.in/natefinch/lumberjack.v2
 	GOBIN=$(LOCAL_BIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
